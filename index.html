@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Линия НХЛ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Макет: одна колонка «табло» — шапка с датами, список матчей дня, по нажатию — линия матча с вкладками рынков */
+:root {
+  --ice: #EEF2F5; --board: #FFFFFF; --ink: #0E1A2B; --muted: #5B6B7E; --rule: #D6DEE6;
+  --red: #C8102E; --blue: #1E4FA3; --blue-soft: #DCE6F6; --ok: #1F7A4D; --warn: #9A6200; --crit: #B42318;
+  --f-display: 'Oswald', 'Arial Narrow', 'Roboto Condensed', sans-serif;
+  --f-body: 'IBM Plex Sans', 'Segoe UI', Roboto, sans-serif;
+  --f-num: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ice: #0A121D; --board: #121D2B; --ink: #E7EDF4; --muted: #93A3B6; --rule: #243246;
+  --red: #FF5A6E; --blue: #7FAAFF; --blue-soft: #1B2B45; --ok: #4CC38A; --warn: #F0B44C; --crit: #FF7A6E; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --ice: #0A121D; --board: #121D2B; --ink: #E7EDF4; --muted: #93A3B6; --rule: #243246;
+  --red: #FF5A6E; --blue: #7FAAFF; --blue-soft: #1B2B45; --ok: #4CC38A; --warn: #F0B44C; --crit: #FF7A6E; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--ice); color: var(--ink); font: 15px/1.45 var(--f-body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--board) }
+.wrap { max-width: 560px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--board); border-bottom: 2px solid var(--red); }
+header.top .wrap { padding-block: 12px 10px; display: grid; gap: 10px }
+.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px }
+.brand h1 { margin: 0; font: 600 24px/1 var(--f-display); letter-spacing: .02em; text-transform: uppercase }
+.brand h1 span { color: var(--red) }
+.brand small { color: var(--muted); font-size: 12px; text-align: right }
+.dates { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px }
+.dates::-webkit-scrollbar { display: none }
+.chip { flex: none; border: 1px solid var(--rule); background: var(--board); color: var(--ink); border-radius: 999px; padding: 6px 12px; font: 500 13px var(--f-body); cursor: pointer; min-height: 34px }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--board); border-color: var(--ink) }
+.chip:focus-visible, button:focus-visible, .game:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px }
+.pick { display: flex; align-items: center; gap: 6px; flex: none; color: var(--muted); font-size: 13px }
+.pick input { font: 500 13px var(--f-body); border: 1px solid var(--rule); border-radius: 8px; padding: 5px 8px; background: var(--board); color: var(--ink); min-height: 34px }
+main .wrap { padding-block: 14px 40px; display: grid; gap: 14px }
+.notice { border-left: 3px solid var(--warn); background: var(--board); padding: 10px 12px; font-size: 13px; color: var(--muted); border-radius: 0 8px 8px 0 }
+.notice b { color: var(--ink) }
+.teams-day { display: flex; flex-wrap: wrap; gap: 6px }
+.tag { font: 500 12px var(--f-num); border: 1px solid var(--rule); border-radius: 6px; padding: 2px 6px; color: var(--muted); background: var(--board) }
+h2 { margin: 6px 0 0; font: 600 13px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.list { display: grid; gap: 10px }
+.game { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; background: var(--board); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; cursor: pointer; text-align: left; color: inherit; font: inherit; width: 100% }
+.game:hover { border-color: var(--blue) }
+.game .time { grid-column: 1 / -1; display: flex; justify-content: space-between; color: var(--muted); font-size: 12px }
+.side { display: flex; align-items: center; gap: 10px; min-width: 0 }
+.abbr { font: 600 20px/1.1 var(--f-display); letter-spacing: .03em; width: 46px; flex: none }
+.nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.gk { color: var(--muted); font-size: 12px }
+.pct { font: 500 15px var(--f-num); text-align: right; align-self: center; font-variant-numeric: tabular-nums }
+.fav { color: var(--blue) }
+.pill { display: inline-block; font: 600 11px var(--f-body); letter-spacing: .06em; text-transform: uppercase; border-radius: 6px; padding: 2px 7px }
+.pill.pass { background: var(--blue-soft); color: var(--blue) }
+.pill.bet { background: var(--ok); color: var(--board) }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; background: var(--warn) }
+.dot.ok { background: var(--ok) }
+/* детальная линия */
+.back { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; color: var(--blue); font: 500 14px var(--f-body); padding: 4px 0; cursor: pointer; min-height: 34px }
+.match { background: var(--board); border: 1px solid var(--rule); border-radius: 12px; padding: 14px; display: grid; gap: 12px }
+.score-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; text-align: center }
+.score-head .abbr { width: auto; font-size: 30px }
+.score-head .vs { color: var(--muted); font: 500 13px var(--f-body) }
+.score-head .sub { font-size: 12px; color: var(--muted) }
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center }
+.facts div { border-top: 1px solid var(--rule); padding-top: 8px }
+.facts b { display: block; font: 500 16px var(--f-num) }
+.facts span { font-size: 12px; color: var(--muted) }
+.reg { display: grid; gap: 6px }
+.regbar { display: flex; height: 28px; border-radius: 6px; overflow: hidden; font: 500 12px var(--f-num) }
+.regbar div { display: flex; align-items: center; justify-content: center; color: var(--board); min-width: 0; white-space: nowrap }
+.regbar .h { background: var(--blue) } .regbar .d { background: var(--muted) } .regbar .a { background: var(--red) }
+.reglegend { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted) }
+details.notes { font-size: 13px; color: var(--muted) }
+details.notes summary { cursor: pointer; color: var(--ink) }
+details.notes li { margin: 4px 0 }
+.sev { font: 600 10px var(--f-body); letter-spacing: .06em; border-radius: 4px; padding: 1px 5px; margin-right: 6px }
+.sev.WARN { background: var(--warn); color: var(--board) } .sev.STALE { background: var(--warn); color: var(--board) } .sev.CRITICAL { background: var(--crit); color: var(--board) }
+.tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--hdr, 96px)); background: var(--ice); padding-block: 8px; z-index: 4 }
+.tabs::-webkit-scrollbar { display: none }
+.tab { flex: none; border: 1px solid var(--rule); background: var(--board); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 500 14px var(--f-body); cursor: pointer; min-height: 36px }
+.tab[aria-selected="true"] { border-color: var(--red); box-shadow: inset 0 -2px 0 var(--red) }
+.panel { display: grid; gap: 12px }
+.group { background: var(--board); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden }
+.group h3 { margin: 0; padding: 10px 14px; font: 600 12px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; gap: 8px }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) 64px 58px; gap: 4px 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--rule) }
+.row:first-of-type { border-top: 0 }
+.row .lab { min-width: 0 }
+.row .lab small { display: block; color: var(--muted); font-size: 12px }
+.bar { height: 4px; background: var(--rule); border-radius: 2px; margin-top: 6px; overflow: hidden }
+.bar i { display: block; height: 100%; background: var(--blue) }
+.num { font: 500 15px var(--f-num); text-align: right; font-variant-numeric: tabular-nums }
+.fair { color: var(--red) }
+.books { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px }
+.book { border: 1px dashed var(--rule); border-radius: 6px; padding: 2px 7px; color: var(--muted) }
+.book b { font: 500 12px var(--f-num); color: var(--ink) }
+.book.pos b { color: var(--ok) } .book.neg b { color: var(--ink) }
+.colhead { display: grid; grid-template-columns: minmax(0, 1fr) 64px 58px; gap: 10px; padding: 6px 14px 0; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em }
+.colhead span:not(:first-child) { text-align: right }
+.seg { display: flex; gap: 6px }
+.scores { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 12px 14px }
+.sc { border: 1px solid var(--rule); border-radius: 10px; padding: 10px 6px; text-align: center }
+.sc b { display: block; font: 600 24px/1 var(--f-display); letter-spacing: .04em }
+.sc span { display: block; font: 500 13px var(--f-num); margin-top: 4px }
+.sc small { color: var(--red); font: 500 12px var(--f-num) }
+.sc em { display: block; font: 500 12px var(--f-num); font-style: normal; color: var(--muted); margin-top: 2px }
+.sc em.pos { color: var(--ok) }
+.sc.draw { background: var(--blue-soft) }
+.foot { font-size: 12px; color: var(--muted); display: grid; gap: 6px }
+.empty { background: var(--board); border: 1px dashed var(--rule); border-radius: 12px; padding: 22px 16px; text-align: center; color: var(--muted) }
+.empty b { color: var(--ink); display: block; margin-bottom: 6px }
+code { font: 500 12px var(--f-num); background: var(--blue-soft); padding: 1px 5px; border-radius: 4px; color: var(--ink); word-break: break-all }
+@media (prefers-reduced-motion: no-preference) { .game, .tab, .chip { transition: border-color .15s, background-color .15s } }
+</style>
+
+<header class="top" id="hdr">
+  <div class="wrap">
+    <div class="brand"><h1>Линия <span>НХЛ</span></h1><small id="gen">загрузка…</small></div>
+    <div class="dates" id="dates" role="group" aria-label="Дата игрового дня">
+      <label class="pick" for="datePick">дата <input type="date" id="datePick"></label>
+    </div>
+  </div>
+</header>
+<main><div class="wrap" id="view">
+  <div class="empty"><b>Загружаю прогнозную линию…</b>Список матчей появится через секунду.</div>
+</div></main>
+
+<script>
+(() => {
+  const view = document.getElementById('view'), datesEl = document.getElementById('dates'), pick = document.getElementById('datePick'), gen = document.getElementById('gen');
+  let index = [], day = null, current = null, tab = 'winner', totalsPeriod = 'весь матч';
+  const cache = {};
+  const pct = p => p == null ? '—' : (p * 100).toFixed(1).replace('.', ',') + '%';
+  const odd = o => o == null ? '—' : Number(o).toFixed(2).replace('.', ',');
+  const msk = s => { const m = /^(\d{4})-(\d\d)-(\d\d) (\d\d:\d\d)/.exec(s || ''); return m ? `${m[3]}.${m[2]} ${m[4]}` : (s || ''); };
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const fmtDay = d => { const [y, m, dd] = d.split('-').map(Number); return new Date(Date.UTC(y, m - 1, dd)).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', weekday: 'short', timeZone: 'UTC' }); };
+  const store = { get(k) { try { return localStorage.getItem(k) } catch { return null } }, set(k, v) { try { localStorage.setItem(k, v) } catch {} } };
+  const setHdr = () => document.documentElement.style.setProperty('--hdr', document.getElementById('hdr').offsetHeight + 'px');
+  window.addEventListener('resize', setHdr);
+
+  async function getJson(path) { const r = await fetch(path, { cache: 'no-store' }); if (!r.ok) throw new Error(path + ': ' + r.status); return r.json(); }
+
+  function renderDates(active) {
+    datesEl.querySelectorAll('.chip').forEach(c => c.remove());
+    index.forEach(d => {
+      const b = document.createElement('button');
+      b.className = 'chip'; b.type = 'button'; b.setAttribute('aria-pressed', d.date === active ? 'true' : 'false');
+      b.textContent = `${fmtDay(d.date)} · ${d.games}`; b.title = `Игровой день ${d.date} (ET), матчей: ${d.games}`;
+      b.addEventListener('click', () => openDate(d.date));
+      datesEl.insertBefore(b, datesEl.lastElementChild);
+    });
+    if (index.length) { pick.min = index[0].date; pick.max = index[index.length - 1].date; }
+    pick.value = active || '';
+    setHdr();
+  }
+
+  async function openDate(date) {
+    current = null;
+    renderDates(date);
+    store.set('nhl-line-date', date);
+    try { history.replaceState(null, '', '#' + date) } catch {}
+    if (!index.some(d => d.date === date)) {
+      view.innerHTML = `<div class="empty"><b>На ${esc(fmtDay(date))} прогноза нет</b>Доступны: ${index.map(d => esc(fmtDay(d.date))).join(', ') || 'нет дат'}.<br>Новый день добавляется так: на компьютере <code>.\\audit\\run_day.ps1 -Date ${esc(date)}</code>, затем попросите Claude обновить приложение.</div>`;
+      return;
+    }
+    try { day = cache[date] || (cache[date] = await getJson(`data/${date}.json`)); }
+    catch (e) { view.innerHTML = `<div class="empty"><b>Не удалось загрузить линию на ${esc(date)}</b>${esc(e.message)}. Обновите страницу.</div>`; return; }
+    gen.textContent = 'расчёт ' + new Date(day.generated_utc).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    renderList();
+  }
+
+  function goalieDot(s) { return `<span class="dot${s === 'Confirmed' ? ' ok' : ''}" title="${esc(s)}"></span>`; }
+  function statusPill(g) { return g.best_bet && g.best_bet !== 'PASS' ? `<span class="pill bet">BET</span>` : `<span class="pill pass">PASS</span>`; }
+
+  function renderList() {
+    const teams = day.games.flatMap(g => [g.away, g.home]);
+    const anyBooks = day.games.some(g => g.winner.some(l => l.books.length));
+    view.innerHTML = `
+      <div class="notice"><b>Прогнозная линия, не совет ставить.</b> Вероятности: ${day.market_weight != null ? Math.round((1 - day.market_weight) * 100) + '% модель + ' + Math.round(day.market_weight * 100) + '% рынок' : 'модель и рынок'}. Аудит не подтвердил преимущество модели над линией — поэтому решения по умолчанию PASS. Ставка имеет смысл только по коэффициенту выше справедливого.${anyBooks ? '' : ' <b>Книги ещё не выставили цены</b> — показаны справедливые коэффициенты.'}</div>
+      <h2>Команды дня · ${teams.length}</h2>
+      <div class="teams-day">${teams.map(t => `<span class="tag" title="${esc(t.full || '')}">${esc(t.abbr)} ${esc(t.name)}</span>`).join('')}</div>
+      <h2>Матчи · ${day.games.length} · время МСК</h2>
+      <div class="list">${day.games.map((g, i) => {
+        const pa = 1 - (g.winner[0]?.p ?? 0.5), ph = g.winner[0]?.p ?? 0.5;
+        const fa = g.favorite?.abbr === g.away.abbr, fh = g.favorite?.abbr === g.home.abbr;
+        return `<button class="game" type="button" data-i="${i}" aria-label="${esc(g.away.name)} в гостях у ${esc(g.home.name)}, ${esc(g.start_msk)}">
+          <div class="time"><span>${esc(msk(g.start_msk))}</span>${statusPill(g)}</div>
+          <div class="side"><span class="abbr">${esc(g.away.abbr)}</span><span class="nm">${esc(g.away.name)} <span class="gk">${goalieDot(g.away.goalie_status)}${esc(g.away.goalie || '')}</span></span></div>
+          <div class="pct ${fa ? 'fav' : ''}">${pct(pa)}</div>
+          <div class="side"><span class="abbr">${esc(g.home.abbr)}</span><span class="nm">${esc(g.home.name)} <span class="gk">${goalieDot(g.home.goalie_status)}${esc(g.home.goalie || '')}</span></span></div>
+          <div class="pct ${fh ? 'fav' : ''}">${pct(ph)}</div>
+        </button>`; }).join('')}</div>
+      <div class="foot"><span>Проценты — вероятность победы с учётом овертайма и буллитов. Точка у вратаря: зелёная — подтверждён, жёлтая — нет.</span><span>Игровой день ${esc(day.date)} по восточному времени США.</span></div>`;
+    view.querySelectorAll('.game').forEach(b => b.addEventListener('click', () => openGame(day.games[+b.dataset.i])));
+  }
+
+  function bookChips(books) {
+    if (!books || !books.length) return '';
+    return `<div class="books">${books.map(b => `<span class="book ${b.ev > 0 ? 'pos' : 'neg'}" title="${esc(b.reasons || '')}">${esc(b.source)}${b.book && b.book !== b.source ? ' ' + esc(b.book) : ''} <b>${odd(b.odds)}</b> · EV ${b.ev == null ? '—' : (b.ev * 100).toFixed(1).replace('.', ',') + '%'} · ${esc(b.decision || '')}</span>`).join('')}</div>`;
+  }
+  function lineRow(l, sub) {
+    const push = l.push > 0.0005 ? ` · возврат ${pct(l.push)}` : '';
+    return `<div class="row"><div class="lab">${esc(l.label)}<small>${esc(sub || l.period)}${push}</small><div class="bar"><i style="width:${Math.max(0, Math.min(100, (l.p || 0) * 100)).toFixed(1)}%"></i></div></div>
+      <div class="num">${pct(l.p)}</div><div class="num fair">${odd(l.fair)}</div>${bookChips(l.books)}</div>`;
+  }
+  const colhead = `<div class="colhead"><span>Исход</span><span>Вероятн.</span><span>Справ.</span></div>`;
+  function group(title, rows, right) { return `<section class="group"><h3><span>${esc(title)}</span>${right ? `<span>${esc(right)}</span>` : ''}</h3>${colhead}${rows}</section>`; }
+
+  function panel(g) {
+    if (tab === 'winner') return group('Победитель · с овертаймом и буллитами', g.winner.map(l => lineRow(l, 'весь матч, включая ОТ и буллиты')).join(''))
+      + group('Исход основного времени · 60 минут', g.regulation_lines.map(l => lineRow(l)).join(''), '1X2 и двойной шанс');
+    if (tab === 'totals') {
+      const list = totalsPeriod === 'весь матч' ? g.totals : g.totals_reg;
+      return `<div class="seg" role="group" aria-label="Период тотала">${['весь матч', 'основное время'].map(p => `<button class="tab" type="button" aria-selected="${p === totalsPeriod}" data-tp="${p}">${p === 'весь матч' ? 'Весь матч (с ОТ)' : 'Основное время'}</button>`).join('')}</div>`
+        + group(`Тотал · ${totalsPeriod}`, list.map(t => lineRow(t.over) + lineRow(t.under)).join(''), totalsPeriod === 'весь матч' ? 'гол победителя ОТ/буллитов засчитан' : 'без ОТ и буллитов');
+    }
+    if (tab === 'tt') return ['home', 'away'].map(s => {
+      const reg = (g.team_totals_reg || []).filter(t => t.side === s);
+      const rows = g.team_totals.filter(t => t.side === s);
+      return (reg.length ? group(`Инд. тотал · ${reg[0].team}`, reg.map(t => lineRow(t.over) + lineRow(t.under)).join(''), 'основное время') : '')
+        + group(`Инд. тотал · ${rows[0]?.team || ''}`, rows.map(t => lineRow(t.over) + lineRow(t.under)).join(''), 'весь матч, с ОТ');
+    }).join('') + `<div class="foot"><span>Fonbet и Марафон принимают инд. тоталы по основному времени, книги США — на весь матч с ОТ.</span></div>`;
+    if (tab === 'exact') {
+      const draw = g.regulation?.draw;
+      return `<section class="group"><h3><span>Точный счёт · основное время</span><span>гости : хозяева</span></h3>
+        <div class="scores">${g.exact.map(s => `<div class="sc${s.away === s.home ? ' draw' : ''}"><b>${s.away}:${s.home}</b><span>${pct(s.p)}</span><small>${odd(s.fair)}</small>${s.mb ? `<em class="${s.mb > s.fair ? 'pos' : ''}" title="EV ${s.mb_ev == null ? '—' : (s.mb_ev * 100).toFixed(1).replace('.', ',') + '%'} · ${esc(s.mb_decision || '')}">М ${odd(s.mb)}</em>` : ''}</div>`).join('')}</div></section>
+        <div class="foot"><span>Счёт после 60 минут: ставка «2:2 в основное время» выигрывает и при победе в ОТ. Ничья после 60 минут по модели — ${pct(draw)}. Даже самый вероятный счёт сыгрывает реже чем в 1 случае из 12.</span><span>${esc(g.away.abbr)} — гости, ${esc(g.home.abbr)} — хозяева. Красная цифра — справедливый коэффициент, «М» — коэффициент Марафона (зелёный — выше справедливого).</span></div>`;
+    }
+    if (tab === 'combo') {
+      if (!g.combos || !g.combos.length) return `<div class="empty"><b>Комбинаций для этого дня нет</b>Линия рассчитана до появления вкладки — пересчитайте день через run_day.ps1.</div>`;
+      const outs = [...new Set(g.combos.map(c => c.outcome))];
+      return outs.map(o => group(o, g.combos.filter(c => c.outcome === o).map(c => lineRow(c.over) + lineRow(c.under)).join(''), 'основное время')).join('')
+        + `<div class="foot"><span>Исход и тотал считаются по основному времени (60 минут) — так рассчитывают Марафон (правила «Хоккей с шайбой») и Fonbet (п. 7.1). Гол в ОТ и победа по буллитам не учитываются.</span><span>Вероятность совместная, из матрицы счёта: она не равна произведению вероятностей исхода и тотала. Ставка имеет смысл, только если коэффициент книги выше красного справедливого.</span></div>`;
+    }
+    if (tab === 'hcp') return group('Фора · весь матч', g.handicaps.filter(l => l.period === 'весь матч').map(l => lineRow(l, 'с ОТ; у Fonbet ±x,5 в основное время — то же событие')).join(''))
+      + group('Фора · основное время (целая)', g.handicaps.filter(l => l.period === 'основное время').map(l => lineRow(l)).join(''), 'возможен возврат');
+    return '';
+  }
+
+  function openGame(g) {
+    current = g;
+    const reg = g.regulation, cells = [['a', reg.away, g.away.abbr], ['d', reg.draw, 'X'], ['h', reg.home, g.home.abbr]];   // как в шапке: гости слева
+    const tabs = [['winner', 'Победитель'], ['totals', 'Тоталы'], ['tt', 'Инд. тоталы'], ['exact', 'Точный счёт'], ['hcp', 'Форы'], ['combo', 'Комбинации']];
+    view.innerHTML = `
+      <button class="back" type="button" id="back">← Матчи ${esc(fmtDay(day.date))}</button>
+      <section class="match">
+        <div class="score-head">
+          <div><div class="abbr">${esc(g.away.abbr)}</div><div>${esc(g.away.name)}</div><div class="sub">${goalieDot(g.away.goalie_status)}${esc(g.away.goalie || '')}</div></div>
+          <div class="vs">${esc(g.start_msk.slice(11))}<br>МСК</div>
+          <div><div class="abbr">${esc(g.home.abbr)}</div><div>${esc(g.home.name)}</div><div class="sub">${goalieDot(g.home.goalie_status)}${esc(g.home.goalie || '')}</div></div>
+        </div>
+        <div class="facts"><div><b>${g.away.xg ?? '—'}</b><span>голов ${esc(g.away.abbr)}</span></div><div><b>${g.exp_total ?? '—'}</b><span>тотал</span></div><div><b>${g.home.xg ?? '—'}</b><span>голов ${esc(g.home.abbr)}</span></div></div>
+        <div class="reg"><div class="regbar" role="img" aria-label="Исход основного времени: ${esc(g.away.abbr)} ${pct(reg.away)}, ничья ${pct(reg.draw)}, ${esc(g.home.abbr)} ${pct(reg.home)}">
+          ${cells.map(([c, p, t]) => `<div class="${c}" style="width:${(p * 100).toFixed(1)}%">${p > 0.14 ? esc(t) + ' ' + pct(p) : ''}</div>`).join('')}</div>
+          <div class="reglegend"><span>гости</span><span>исход 60 минут (модель)</span><span>хозяева</span></div></div>
+        ${g.notes.length ? `<details class="notes"><summary>Качество данных · ${g.notes.length}</summary><ul>${g.notes.map(n => `<li><span class="sev ${esc(n.severity)}">${esc(n.severity)}</span>${esc(n.text)}</li>`).join('')}</ul></details>` : ''}
+      </section>
+      <div class="tabs" role="tablist" aria-label="Рынки">${tabs.map(([k, t]) => `<button class="tab" role="tab" type="button" aria-selected="${k === tab}" data-tab="${k}">${t}</button>`).join('')}</div>
+      <div class="panel" id="panel" role="tabpanel">${panel(g)}</div>`;
+    document.getElementById('back').addEventListener('click', () => { current = null; renderList(); window.scrollTo(0, 0); });
+    view.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { tab = b.dataset.tab; store.set('nhl-line-tab', tab); openGame(g); }));
+    bindPanel(g);
+    setHdr();
+    window.scrollTo(0, 0);
+    view.querySelector('.tab[aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+  function bindPanel(g) {
+    view.querySelectorAll('[data-tp]').forEach(b => b.addEventListener('click', () => { totalsPeriod = b.dataset.tp; document.getElementById('panel').innerHTML = panel(g); bindPanel(g); }));
+  }
+
+  pick.addEventListener('change', () => { if (pick.value) openDate(pick.value); });
+
+  (async () => {
+    tab = store.get('nhl-line-tab') || 'winner';
+    try { index = (await getJson('data/index.json')).dates || []; }
+    catch (e) { view.innerHTML = `<div class="empty"><b>Не удалось загрузить список дат</b>${esc(e.message)}</div>`; return; }
+    const h = location.hash.slice(1), saved = store.get('nhl-line-date');
+    const today = new Date().toISOString().slice(0, 10);
+    const pickDate = [h, saved].find(d => index.some(x => x.date === d)) || (index.find(d => d.date >= today) || index[index.length - 1] || {}).date;
+    if (!pickDate) { view.innerHTML = '<div class="empty"><b>Прогнозов пока нет</b>Запустите run_day.ps1 на компьютере.</div>'; renderDates(''); return; }
+    openDate(pickDate);
+  })();
+})();
+</script>
