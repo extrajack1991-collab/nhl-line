@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>window.addEventListener('error',function(e){var v=document.getElementById('view');if(v&&!v.querySelector('.gcard,.kpi,.bcard'))v.innerHTML='<div style="padding:16px;color:#c00">Ошибка загрузки: '+String(e.message||e).replace(/</g,'&lt;')+'</div>'});</script>
+<script async src="https://telegram.org/js/telegram-web-app.js" onload="window.dispatchEvent(new Event('tg-ready'))"></script>
 <title>Линия НХЛ</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -629,7 +630,13 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
   };
   const sections = [['games', 'Игры'], ['stats', 'Статистика'], ['bets', 'Ставки'], ['analytics', 'Аналитика']];
   function BottomNavigation() { navEl.innerHTML = sections.map(([k, t]) => `<button type="button" data-sec="${k}"${S.section === k ? ' aria-current="page"' : ''}>${icons[k]}<span>${t}</span></button>`).join(''); }
-  const tg = window.Telegram?.WebApp;
+  // скрипт Telegram грузится асинхронно (на Pages): страница не ждёт telegram.org и подключает WebApp, когда он появится
+  let tg = null;
+  function initTg() {
+    const w = window.Telegram && window.Telegram.WebApp; if (!w || tg) return; tg = w;
+    try { tg.ready(); tg.expand(); if (tg.colorScheme) document.documentElement.dataset.theme = tg.colorScheme; tg.BackButton?.onClick?.(() => closeSheet()); setBack(!!S.open); } catch {}
+  }
+  window.addEventListener('tg-ready', initTg);
   function setBack(on) { if (!tg?.BackButton) return; on ? tg.BackButton.show() : tg.BackButton.hide(); }
   function setHdr() { document.documentElement.style.setProperty('--hdr', $('hdr').offsetHeight + 'px'); }
   async function render() {
@@ -657,11 +664,10 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     else if (t.dataset.period) { S.period = t.dataset.period; store.set('nhl-period', S.period); renderStats(); }
     else if (t.dataset.retry) init();
   });
-  tg?.BackButton?.onClick?.(() => closeSheet());
   window.addEventListener('resize', setHdr);
 
   async function init() {
-    if (tg) { try { tg.ready(); tg.expand(); if (tg.colorScheme) document.documentElement.dataset.theme = tg.colorScheme; } catch {} }
+    initTg();
     view.innerHTML = LoadingState(3);
     try { S.index = (await getJson('data/index.json')).dates || []; }
     catch (e) { view.innerHTML = EmptyState('Не удалось загрузить данные', esc(e.message), true); BottomNavigation(); return; }
