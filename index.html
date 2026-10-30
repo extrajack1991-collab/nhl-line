@@ -209,7 +209,7 @@ main .wrap { padding-block: 14px calc(var(--nav-h) + env(safe-area-inset-bottom,
 /* нижняя навигация */
 nav.bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; background: var(--surface); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px)) }
-nav.bottom .in { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); height: var(--nav-h) }
+nav.bottom .in { max-width: 360px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, 1fr); height: var(--nav-h) }
 nav.bottom button { border: 0; background: none; display: grid; justify-items: center; align-content: center; gap: 3px; font-size: 11px; color: var(--muted); cursor: pointer }
 nav.bottom svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
 nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 }
@@ -628,7 +628,8 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     bets: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".8" fill="currentColor"/></svg>',
     analytics: '<svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>'
   };
-  const sections = [['games', 'Игры'], ['stats', 'Статистика'], ['bets', 'Ставки'], ['analytics', 'Аналитика']];
+  // «Статистика» и «Ставки» убраны из навигации по просьбе пользователя (29.10); их код оставлен, ссылки #stats/#bets открывают «Игры»
+  const sections = [['games', 'Игры'], ['analytics', 'Аналитика']];
   function BottomNavigation() { navEl.innerHTML = sections.map(([k, t]) => `<button type="button" data-sec="${k}"${S.section === k ? ' aria-current="page"' : ''}>${icons[k]}<span>${t}</span></button>`).join(''); }
   // скрипт Telegram грузится асинхронно (на Pages): страница не ждёт telegram.org и подключает WebApp, когда он появится
   let tg = null;
