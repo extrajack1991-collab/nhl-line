@@ -488,7 +488,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
 
   // детали матча — прежние вкладки линии
   const colhead = `<div class="colhead"><span>Исход</span><span>Вероятн.</span><span>Справ.</span></div>`;
-  function bookChips(books) { return books?.length ? `<div class="books">${books.map(b => `<span class="book ${b.ev > 0 ? 'pos' : ''}" title="${esc(b.reasons || '')}">${esc(b.source)}${b.book && b.book !== b.source ? ' ' + esc(b.book) : ''} <b>${odd(b.odds)}</b> · EV ${b.ev == null ? '—' : sPct(b.ev)} · ${esc(b.decision || '')}</span>`).join('')}</div>` : ''; }
+  function bookChips(books) { return books?.length ? `<div class="books">${books.map(b => `<span class="book ${b.ev > 0 ? 'pos' : ''}" title="${esc(b.reasons || '')}">${esc(b.source)}${b.book && b.book !== b.source ? ' ' + esc(b.book) : ''} <b>${odd(b.odds)}</b> · EV ${b.ev == null ? '—' : sPct(b.ev)}${b.decision ? ' · ' + esc(b.decision) : ''}</span>`).join('')}</div>` : ''; }
   function lineRow(l, sub) {
     const push = l.push > 0.0005 ? ` · возврат ${pct(l.push)}` : '';
     return `<div class="row"><div class="lab">${esc(l.label)}<small>${esc(sub || l.period)}${push}</small><div class="pbar"><i style="width:${Math.max(0, Math.min(100, (l.p || 0) * 100)).toFixed(1)}%"></i></div></div>
