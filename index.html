@@ -739,7 +739,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     const gt = A.gate;
     const gate = gt ? `<section class="panelbox" style="grid-column:1 / -1"><h3><span>Правило BET</span>${gt.proven ? '<span class="pill ok">преимущество доказано</span>' : '<span class="pill na">BET невозможен</span>'}</h3>
       <div>${esc(gt.reason)}.</div>
-      <div class="foot">BET возможен, только если на независимых данных выполнено оба условия: не меньше ${gt.min_matches} матчей, где итог приложения значимо лучше рынка по log loss, и не меньше ${gt.min_bets} ставок по правилу «${esc(gt.bet_rule)}» с CLV-EV значимо выше нуля. Пока условия не выполнены, все решения — PASS, даже при положительном EV.</div></section>` : '';
+      <div class="foot">BET возможен, только если на независимых данных выполнены оба условия: не меньше ${gt.min_matches} матчей, где итог приложения значимо лучше рынка по log loss, и не меньше ${gt.min_bets} ставок по правилу «${esc(gt.bet_rule)}» с CLV-EV значимо выше нуля. Пока условия не выполнены, все решения — PASS, даже при положительном EV.</div></section>` : '';
     return `<div class="ana-grid">${gate}${val}${paper}${real}${s8}${health}${qual}</div>`;
   }
 
