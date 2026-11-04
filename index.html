@@ -56,7 +56,7 @@ header.top .wrap { padding-block: 10px; display: grid; gap: 10px }
 .today-link { justify-self: center; border: 0; background: none; color: var(--accent); font-size: 12px; cursor: pointer; padding: 0 }
 
 main .wrap { padding-block: 14px calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 24px); display: grid; gap: 14px }
-.sec-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px }
+.sec-h { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 10px; flex-wrap: wrap }
 .sec-h h2 { margin: 0; font: 600 13px var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted) }
 .sec-h span { font-size: 12px; color: var(--muted) }
 
@@ -206,6 +206,40 @@ main .wrap { padding-block: 14px calc(var(--nav-h) + env(safe-area-inset-bottom,
 @media (prefers-reduced-motion: no-preference) { .skel { animation: shimmer 1.2s linear infinite } .gcard, .bcard, .day, .tab { transition: border-color .15s, background-color .15s } }
 @keyframes shimmer { to { background-position: -200% 0 } }
 
+/* достоверность (этап 9 аудита): прогноз и решение, время котировок, статусы выборки, интервалы */
+.trust { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px }
+.trust h3, .panelbox h3 { margin: 0; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font: 600 12px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.ttab { overflow-x: auto }
+.ttab table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 300px }
+.ttab th, .ttab td { padding: 7px 8px; border-top: 1px solid var(--line); text-align: right; font-family: var(--f-num); font-variant-numeric: tabular-nums; vertical-align: top }
+.ttab th:first-child, .ttab td:first-child { text-align: left; font-family: var(--f-body) }
+.ttab thead th { border-top: 0; color: var(--muted); font: 600 11px var(--f-body); text-transform: uppercase; letter-spacing: .06em }
+.ttab td small { display: block; color: var(--muted); font: 400 11px var(--f-body); overflow-wrap: anywhere }
+.ttab.fit table { min-width: 0; table-layout: fixed } .ttab.fit td:first-child { width: 42% }
+.ttab tr.final td { font-weight: 600 }
+.qtimes { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px }
+.qt { border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; color: var(--muted) }
+.qt b { font: 500 12px var(--f-num); color: var(--text) }
+.qt.old { border-color: var(--warn) } .qt.old b { color: var(--warn) }
+.qt.po { border-style: dashed }
+.pill { display: inline-flex; align-items: center; gap: 5px; font: 600 10.5px var(--f-body); letter-spacing: .05em; text-transform: uppercase; border-radius: 999px; padding: 3px 8px; white-space: nowrap }
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor }
+.pill.ok { background: var(--pos-soft); color: var(--pos) } .pill.warn { background: var(--surface-2); color: var(--warn) }
+.pill.fail { background: var(--neg-soft); color: var(--neg) } .pill.na { background: var(--surface-2); color: var(--muted) }
+.panelbox { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 10px; min-width: 0 }
+.ana-grid { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr) }
+@media (min-width: 900px) { .ana-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) } }
+main .wrap > * { min-width: 0 }
+.ttab.ci table { min-width: 0; table-layout: fixed } .ttab.ci th:first-child, .ttab.ci td:first-child { width: 44% }
+.ttab.ci td small.nw { white-space: nowrap; font-family: var(--f-num); overflow-wrap: normal } .ttab.ci th:last-child { width: 26% }
+.cibar { display: block; width: 100%; height: 18px }
+.cibar .axis { stroke: var(--line); stroke-width: 1 } .cibar .zero { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 2 }
+.cibar .rng { stroke: var(--accent); stroke-width: 3; stroke-linecap: round } .cibar .rng.neg { stroke: var(--neg) } .cibar .rng.pos { stroke: var(--pos) }
+.cibar .pt { fill: var(--surface); stroke: var(--text); stroke-width: 1.5 }
+.hlist { display: grid; gap: 4px; font-size: 12.5px } .hlist div { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 6px; align-items: baseline }
+.hlist i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--pos) } .hlist i.warn { background: var(--warn) } .hlist i.fail { background: var(--neg) }
+.hlist span { min-width: 0; overflow-wrap: anywhere } .hlist b { font-weight: 600 }
+
 /* нижняя навигация */
 nav.bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; background: var(--surface); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px)) }
@@ -339,11 +373,56 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
         <div class="gtop"><span class="when">${esc(localTime(start))}</span><span class="tags">${state}${bet}${fav}</span></div>
         <div class="teams">${TeamRow(g.home.abbr, 'home', g, res)}${TeamRow(g.away.abbr, 'away', g, res)}</div>
         ${o ? o.html : `<div class="odds">${['П1', 'X', 'П2'].map(k => `<div class="odd fair"><small>${k}</small><b>—</b></div>`).join('')}</div>`}
-        <div class="gfoot"><span>${o ? `Осн. время · ${esc(o.src)}` : 'Линия ещё не рассчитана'}</span>${res && res.end !== 'REG' ? `<span>60 мин: ${res.reg_home}:${res.reg_away}</span>` : ''}</div>
+        <div class="gfoot"><span>${o ? `Осн. время · ${esc(o.src)}${(() => { const t = /Марафон/.test(o.src) ? g.quotes?.marathon_utc : /Fonbet/.test(o.src) ? g.quotes?.fonbet_utc : null; return t ? ' · ' + esc(hm(t)) : ''; })()}` : 'Линия ещё не рассчитана'}</span>${res && res.end !== 'REG' ? `<span>60 мин: ${res.reg_home}:${res.reg_away}</span>` : ''}</div>
       </button>
       <button class="more" type="button" data-more="${esc(g.key)}" aria-expanded="${open}"><span>Форма и статистика команд</span><span class="chev">▾</span></button>
       ${open ? `<div class="extra">${GameExtra(g, g.away.abbr, g.home.abbr)}</div>` : ''}
     </article>`;
+  }
+  // ---------- достоверность (этап 9 аудита) ----------
+  const ageTxt = iso => { if (!iso) return '—'; const m = (Date.now() - new Date(iso).getTime()) / 60000; return m < 60 ? `${Math.max(0, Math.round(m))} мин` : m < 2880 ? `${Math.round(m / 60)} ч` : `${Math.round(m / 1440)} дн`; };
+  const hm = iso => iso ? new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+  // статус выборки: показываем всегда вместе с n
+  const StatusPill = (status, n, req) => status === 'insufficient' ? `<span class="pill na" title="Для вывода нужно не меньше ${req}">недостаточно данных · n ${n} из ${req}</span>` : `<span class="pill ok">n ${n}</span>`;
+  const LevelPill = l => `<span class="pill ${l === 'ok' ? 'ok' : l === 'fail' ? 'fail' : l === 'warn' ? 'warn' : 'na'}">${{ ok: 'норма', warn: 'предупреждение', fail: 'сбой' }[l] || 'нет данных'}</span>`;
+  // полоса 95% интервала вокруг нуля; Span — половина ширины шкалы в единицах значения
+  function CIBar(lo, mean, hi, span, goodSign) {
+    if (lo == null || hi == null) return '';
+    const W = 200, x = v => Math.max(4, Math.min(W - 4, W / 2 + (v / span) * (W / 2 - 6)));
+    const cls = lo > 0 ? (goodSign > 0 ? 'pos' : 'neg') : hi < 0 ? (goodSign < 0 ? 'pos' : 'neg') : '';
+    return `<svg class="cibar" viewBox="0 0 ${W} 18" preserveAspectRatio="none" role="img" aria-label="95% интервал от ${dec(lo, 4)} до ${dec(hi, 4)}"><line class="axis" x1="4" x2="${W - 4}" y1="9" y2="9"/><line class="zero" x1="${W / 2}" x2="${W / 2}" y1="2" y2="16"/><line class="rng ${cls}" x1="${x(lo).toFixed(1)}" x2="${x(hi).toFixed(1)}" y1="9" y2="9"/><circle class="pt" cx="${x(mean).toFixed(1)}" cy="9" r="3"/></svg>`;
+  }
+  // время котировок по источникам: устаревшей считается котировка старше 24 ч до начала матча
+  function QuoteTimes(g) {
+    const q = g.quotes; if (!q) return '';
+    const st = new Date(g.start_utc).getTime(), old = iso => iso && (st - new Date(iso).getTime()) > 24 * 3600e3;
+    const chips = (q.us || []).map(u => `<span class="qt${old(u.updated_utc) ? ' old' : ''}${u.in_market ? '' : ' po'}" title="${u.in_market ? 'входит в рыночную вероятность' : 'только цена — в рыночную вероятность не входит'}">${esc(u.book)} <b>${esc(hm(u.updated_utc))}</b></span>`);
+    if (q.marathon_utc) chips.push(`<span class="qt po" title="только цена">Марафон <b>${esc(hm(q.marathon_utc))}</b></span>`);
+    if (q.fonbet_utc) chips.push(`<span class="qt po" title="только цена">Fonbet <b>${esc(hm(q.fonbet_utc))}</b></span>`);
+    return chips.length ? `<div class="qtimes" aria-label="Время котировок">${chips.join('')}</div><div class="foot">Время последней котировки до расчёта. Сплошная рамка — книга входит в рыночную вероятность, пунктир — только цена; жёлтая — котировка не менялась больше 24 ч до начала.</div>` : '';
+  }
+  function TrustBlock(g) {
+    const p = g.probs; if (!p) return '';
+    const side = s => (p.sides || []).find(x => x.side === s) || {};
+    const h = side('home'), a = side('away'), two = v => v == null ? ['—', '—'] : [pct(v), pct(1 - v)];
+    const [mh, ma] = two(p.market_home), [oh, oa] = two(p.model_home), [bh, ba] = two(p.blend_home);
+    const evc = v => v == null ? '' : v > 0 ? 'pos' : 'neg';
+    const why = [h.reasons, a.reasons].filter(Boolean)[0] || '';
+    return `<div class="trust">
+      <h3><span>Прогноз и решение · победа с ОТ</span><span class="tag ${g.best_bet && g.best_bet !== 'PASS' ? 'bet' : ''}">${esc(g.best_bet && g.best_bet !== 'PASS' ? 'BET' : 'PASS')}</span></h3>
+      <div class="ttab fit"><table>
+        <thead><tr><th></th><th>П1 · ${esc(g.home.abbr)}</th><th>П2 · ${esc(g.away.abbr)}</th></tr></thead>
+        <tbody>
+          <tr><td>Рынок<small>${p.books_n || '—'} книг США без маржи</small></td><td>${mh}</td><td>${ma}</td></tr>
+          <tr><td>Модель<small>без рынка</small></td><td>${oh}</td><td>${oa}</td></tr>
+          <tr class="final"><td>Итог приложения<small>${Math.round((p.market_weight ?? 0.9) * 100)}% рынок + ${Math.round((1 - (p.market_weight ?? 0.9)) * 100)}% модель</small></td><td>${bh}</td><td>${ba}</td></tr>
+          <tr><td>Лучшая цена<small>книги рынка</small></td><td>${odd(h.price)}<small>${esc(h.book || '').replace(/\//g, ', ')}</small></td><td>${odd(a.price)}<small>${esc(a.book || '').replace(/\//g, ', ')}</small></td></tr>
+          <tr><td>EV<small>по итоговой вероятности</small></td><td class="${evc(h.ev)}">${h.ev == null ? '—' : sPct(h.ev)}</td><td class="${evc(a.ev)}">${a.ev == null ? '—' : sPct(a.ev)}</td></tr>
+          <tr><td>Решение</td><td>${esc(h.decision || '—')}</td><td>${esc(a.decision || '—')}</td></tr>
+        </tbody></table></div>
+      ${why ? `<details class="foot"><summary>Почему PASS</summary>${esc(why)}</details>` : ''}
+      ${QuoteTimes(g)}
+    </div>`;
   }
   function EmptyState(title, text, retry) { return `<div class="state"><span class="ico">НХЛ</span><b>${esc(title)}</b>${text ? `<span>${text}</span>` : ''}${retry ? `<button class="retry" type="button" data-retry="1">Повторить</button>` : ''}</div>`; }
   const LoadingState = (n = 3) => Array.from({ length: n }, () => '<div class="skel"></div>').join('');
@@ -488,7 +567,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
 
   // детали матча — прежние вкладки линии
   const colhead = `<div class="colhead"><span>Исход</span><span>Вероятн.</span><span>Справ.</span></div>`;
-  function bookChips(books) { return books?.length ? `<div class="books">${books.map(b => `<span class="book ${b.ev > 0 ? 'pos' : ''}" title="${esc(b.reasons || '')}">${esc(b.source)}${b.book && b.book !== b.source ? ' ' + esc(b.book) : ''} <b>${odd(b.odds)}</b> · EV ${b.ev == null ? '—' : sPct(b.ev)}${b.decision ? ' · ' + esc(b.decision) : ''}</span>`).join('')}</div>` : ''; }
+  function bookChips(books) { return books?.length ? `<div class="books">${books.map(b => `<span class="book ${b.ev > 0 ? 'pos' : ''}" title="${esc(b.source === 'Fanatics' ? 'Только цена: Fanatics не входит в рыночную вероятность. ' : '')}${esc(b.reasons || '')}">${esc(b.source)}${b.book && b.book !== b.source ? ' ' + esc(b.book) : ''} <b>${odd(b.odds)}</b> · EV ${b.ev == null ? '—' : sPct(b.ev)}${b.decision ? ' · ' + esc(b.decision) : ''}</span>`).join('')}</div>` : ''; }
   function lineRow(l, sub) {
     const push = l.push > 0.0005 ? ` · возврат ${pct(l.push)}` : '';
     return `<div class="row"><div class="lab">${esc(l.label)}<small>${esc(sub || l.period)}${push}</small><div class="pbar"><i style="width:${Math.max(0, Math.min(100, (l.p || 0) * 100)).toFixed(1)}%"></i></div></div>
@@ -497,7 +576,8 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
   const group = (title, rows, right) => `<section class="group"><h3><span>${esc(title)}</span>${right ? `<span>${esc(right)}</span>` : ''}</h3>${colhead}${rows}</section>`;
   function panel(g) {
     const t = S.tab;
-    if (t === 'winner') return group('Победитель · с ОТ и буллитами', g.winner.map(l => lineRow(l, 'весь матч, включая ОТ и буллиты')).join('')) + group('Исход основного времени · 60 минут', g.regulation_lines.map(l => lineRow(l)).join(''), '1X2 и двойной шанс');
+    if (t === 'winner') return group('Победитель · с ОТ и буллитами', g.winner.map(l => lineRow(l, 'весь матч, включая ОТ и буллиты')).join('')) + group('Исход основного времени · 60 минут', g.regulation_lines.map(l => lineRow(l)).join(''), '1X2 и двойной шанс')
+      + `<div class="foot">Рыночная вероятность — DraftKings, FanDuel, BetRivers, BetMGM, Caesars без маржи. Fanatics, Марафон и Fonbet — только цена, в рыночную вероятность не входят. Решение PASS/BET стоит на фишке «США» — лучшей цене книг рынка.</div>`;
     if (t === 'totals') { const list = S.totals === 'весь матч' ? g.totals : g.totals_reg;
       return `<div class="seg" role="group" aria-label="Период тотала">${['весь матч', 'основное время'].map(p => `<button type="button" aria-pressed="${p === S.totals}" data-tp="${p}">${p === 'весь матч' ? 'Весь матч (с ОТ)' : 'Основное время'}</button>`).join('')}</div>`
         + group(`Тотал · ${S.totals}`, list.map(x => lineRow(x.over) + lineRow(x.under)).join(''), S.totals === 'весь матч' ? 'гол победителя ОТ/буллитов засчитан' : 'без ОТ и буллитов'); }
@@ -526,6 +606,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
         ${reg ? `<div class="facts"><div><b>${dec(g.home.xg)}</b><span>ожид. голов ${esc(g.home.abbr)}</span></div><div><b>${dec(g.exp_total)}</b><span>ожид. тотал</span></div><div><b>${dec(g.away.xg)}</b><span>ожид. голов ${esc(g.away.abbr)}</span></div></div>
         <div class="regbar" role="img" aria-label="Исход основного времени: хозяева ${pct(reg.home)}, ничья ${pct(reg.draw)}, гости ${pct(reg.away)}">${[['h', reg.home, g.home.abbr], ['d', reg.draw, 'X'], ['a', reg.away, g.away.abbr]].map(([c, p, t]) => `<div class="${c}" style="width:${(p * 100).toFixed(1)}%">${p > 0.14 ? esc(t) + ' ' + pct(p, 0) : ''}</div>`).join('')}</div>
         <div class="legend"><span>хозяева</span><span>вероятность исхода 60 минут</span><span>гости</span></div>` : ''}
+        ${TrustBlock(g)}
         ${GameExtra(g, g.away.abbr, g.home.abbr)}
         ${g.notes?.length ? `<details class="foot"><summary>Качество данных · ${g.notes.length}</summary><ul>${g.notes.map(n => `<li>${esc(n.severity)} — ${esc(n.text)}</li>`).join('')}</ul></details>` : ''}
       </section>
@@ -601,7 +682,8 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
         const ph = g.winner[0].p, y = r.fin_home > r.fin_away ? 1 : 0; rows.push({ date: d.date, ph, y, fav: ph >= 0.5 ? 1 : 0, reg: g.regulation, rh: r.reg_home, ra: r.reg_away }); }
     }
     if (S.section !== 'analytics') return;
-    if (!rows.length) { view.innerHTML = `<div class="sec-h"><h2>Аналитика</h2></div>` + EmptyState('Недостаточно данных', 'Нужны дни с рассчитанной линией и известными результатами.'); return; }
+    const strict = AnalyticsStrict();
+    if (!rows.length) { view.innerHTML = `<div class="sec-h"><h2>Аналитика</h2></div>` + strict + EmptyState('Недостаточно данных', 'Нужны дни с рассчитанной линией и известными результатами.'); return; }
     const hits = rows.filter(r => r.fav === r.y).length, brier = rows.reduce((s, r) => s + (r.ph - r.y) ** 2, 0) / rows.length;
     const ll = rows.reduce((s, r) => s - Math.log(Math.min(Math.max(r.y ? r.ph : 1 - r.ph, 1e-9), 1)), 0) / rows.length;
     const draws = rows.filter(r => r.rh === r.ra).length, pd = rows.reduce((s, r) => s + (r.reg?.draw || 0), 0) / rows.length;
@@ -611,14 +693,49 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     const fav = rows.map(r => ({ p: Math.max(r.ph, 1 - r.ph), w: (r.ph >= .5 ? r.y : 1 - r.y) }));
     const cal = [[.5, .55], [.55, .6], [.6, .65], [.65, 1]].map(([lo, hi]) => { const g = fav.filter(r => r.p >= lo && r.p < hi); return g.length ? { x: `${Math.round(lo * 100)}–${Math.round(Math.min(hi, .99) * 100)}%`, y: 100 * g.filter(r => r.w).length / g.length, n: g.length, p: 100 * g.reduce((s, r) => s + r.p, 0) / g.length } : null; }).filter(Boolean);
     view.innerHTML = `
-      <div class="sec-h"><h2>Аналитика</h2><span>прогнозы против результатов</span></div>
+      <div class="sec-h"><h2>Аналитика</h2><span>${S.ana ? 'расчёт ' + esc(hm(S.ana.generated_utc)) : ''}</span></div>
+      ${strict}
+      <div class="sec-h"><h2>Прогнозы против результатов · описательно</h2>${StatusPill(rows.length < 300 ? 'insufficient' : 'ok', rows.length, 300)}</div>
       <div class="kpis">${StatsCard('Матчей с итогом', rows.length)}${StatsCard('Угадан победитель', pct(hits / rows.length, 0))}${StatsCard('Brier', brier.toFixed(3).replace('.', ','))}${StatsCard('Log loss', ll.toFixed(3).replace('.', ','))}${StatsCard('Ничьих 60 мин', `${draws} из ${rows.length}`)}${StatsCard('Ничья по модели', pct(pd, 0))}</div>
       <div class="charts">
         ${StatsChart('ch-hit', 'Угадан победитель по дням', '', daily, { kind: 'bar', fmt: v => v.toFixed(0) + '%', zero: true, yMin: 0, yMax: 100 })}
         ${StatsChart('ch-cal', 'Калибровка: фаворит выигрывал', '', cal.map(c => ({ x: c.x, y: c.y, tip: `прогноз ${c.p.toFixed(0)}% → факт ${c.y.toFixed(0)}% · матчей ${c.n}` })), { fmt: v => v.toFixed(0) + '%', zero: false, yMin: 0, yMax: 100 })}
       </div>
-      <div class="note"><b>Базовый прогноз — рынок.</b> Вероятности приложения — 90% линия книг США и 10% модель. Аудит (этапы 4 и 7) не нашёл у модели информации сверх рынка, поэтому решения по умолчанию PASS. Brier 0,25 и log loss 0,693 — уровень монетки; рынок НХЛ обычно даёт около 0,24 и 0,67. Меньше нескольких сотен матчей — это шум.</div>`;
+      <div class="foot">Этот блок — по последнему расчёту каждого дня из приложения, включая расчёты, сделанные близко к началу. Строгая проверка (только прогнозы до начала, один набор матчей) — выше. Brier 0,25 и log loss 0,693 — уровень монетки; рынок НХЛ обычно даёт около 0,24 и 0,67.</div>`;
     bindTips();
+  }
+
+  // Строгая аналитика из data/analytics.json (export_analytics.ps1): у каждого показателя — n и статус выборки
+  function AnalyticsStrict() {
+    const A = S.ana;
+    if (!A) return `<div class="note"><b>Сводка проверок недоступна.</b> Файл analytics.json появится после следующего расчёта линии.</div>`;
+    const v = A.validation || {}, ll = x => x == null ? '—' : Number(x).toFixed(4).replace('.', ',');
+    const diffRow = d => `<tr><td>${esc(d.label)}<small>${esc(d.verdict)}</small></td><td>${ll(d.mean)}<small class="nw">[${ll(d.lo)}; ${ll(d.hi)}]</small></td><td>${CIBar(d.lo, d.mean, d.hi, 0.04, -1)}</td></tr>`;
+    const val = `<section class="panelbox"><h3><span>Модель против рынка · победа с ОТ</span>${StatusPill(v.status, v.n, v.required_n)}</h3>
+      <div class="ttab"><table><thead><tr><th>Прогноз</th><th>Log loss</th><th>Brier</th></tr></thead><tbody>${(v.variants || []).map(x => `<tr><td>${esc(x.label)}</td><td>${ll(x.log_loss)}</td><td>${ll(x.brier)}</td></tr>`).join('')}</tbody></table></div>
+      <div class="ttab ci"><table><thead><tr><th>Разность log loss</th><th>Среднее · 95% ДИ</th><th></th></tr></thead><tbody>${(v.diffs || []).map(diffRow).join('')}</tbody></table></div>
+      <div class="foot">${v.n} матчей за ${v.days} игровых дней; прогноз — последний расчёт строго до начала матча. Меньше — лучше; разность ниже нуля — первый прогноз лучше второго. Интервал через ноль — разницы не доказано.</div></section>`;
+    const paper = `<section class="panelbox"><h3><span>CLV «бумажных» ставок по модели</span></h3>
+      <div class="ttab ci"><table><thead><tr><th>Правило</th><th>CLV-EV · 95% ДИ</th><th></th></tr></thead><tbody>${(A.paper_bets || []).map(p => `<tr><td>${esc(p.rule)}<small>${StatusPill(p.status, p.n_clv, p.required_n)}</small><small>${esc(p.verdict)} · итог ${money(p.profit)} на ${p.settled}</small></td><td>${p.clv_ev == null ? '—' : sPct(p.clv_ev)}${p.lo == null ? '' : `<small class="nw">[${sPct(p.lo)}; ${sPct(p.hi)}]</small>`}</td><td>${CIBar(p.lo, p.clv_ev, p.hi, 0.1, 1)}</td></tr>`).join('')}</tbody></table></div>
+      <div class="foot">CLV-EV = вероятность закрытия рынка без маржи × цена входа − 1: ожидаемая доходность, если закрытие — честная вероятность. Цена — лучшая из книг США на момент расчёта, закрытие — ESPN.</div></section>`;
+    const r = A.real_bets || {};
+    const real = `<section class="panelbox"><h3><span>Журнал реальных ставок</span>${StatusPill(r.status, r.settled, r.required_n)}</h3>
+      <div class="kpis">${StatsCard('Ставок', r.settled)}${StatsCard('Итог', money(r.profit), r.profit > 0 ? 'pos' : r.profit < 0 ? 'neg' : '')}${StatsCard('ROI', sPct(r.roi), r.roi > 0 ? 'pos' : r.roi < 0 ? 'neg' : '')}${StatsCard('Без 2 лучших', money(r.profit_without_top2), r.profit_without_top2 > 0 ? 'pos' : 'neg')}${StatsCard('CLV известен', `${r.clv_known} из ${r.n}`)}${StatsCard('Со временем', `${r.with_time} из ${r.n}`)}</div>
+      <div class="foot">Ставка 1 единица. Последняя запись — ${r.last_bet_day ? esc(dayParts(r.last_bet_day.slice(0, 4) + '-' + r.last_bet_day.slice(4, 6) + '-' + r.last_bet_day.slice(6)).day) : '—'}. Без времени ставки CLV и исполнение не оцениваются.</div></section>`;
+    const s8 = `<section class="panelbox"><h3><span>Этап 8 · скорость реакции рынка</span></h3>
+      <div class="ttab ci"><table><thead><tr><th>Сигнал</th><th>Класс</th><th>n</th><th>CLV-EV</th></tr></thead><tbody>${(A.stage8 || []).map(x => `<tr><td>${esc(x.candidate)}<small>${StatusPill(x.status, x.n, 100)} · test ${x.n_test} · пересмотр ${esc(x.next_review)}</small></td><td>${esc(x.class)}</td><td>${x.n}</td><td>${x.clv == null ? '—' : sPct(x.clv) + `<small class="nw">[${sPct(x.lo)}; ${sPct(x.hi)}]</small>`}</td></tr>`).join('')}</tbody></table></div>
+      <div class="foot">Событие — первый вход на матч. Выборка с 05.11 15:11 МСК. Класс A (доказанный перевес) — от 300 событий и положительной нижней границы на test; до этого решения — PASS.</div></section>`;
+    const h = A.health || {}, checks = h.checks || [], bad = checks.filter(c => c.level !== 'ok');
+    const health = `<section class="panelbox"><h3><span>Источники и сборщики</span>${LevelPill(h.level)}</h3>
+      <div class="hlist">${(bad.length ? bad : checks.slice(0, 3)).map(c => `<div><i class="${c.level}"></i><span><b>${esc(c.check)}</b> — ${esc(c.detail)}</span></div>`).join('')}</div>
+      <details class="foot"><summary>Все проверки · ${checks.length}${bad.length ? ', с замечаниями ' + bad.length : ', замечаний нет'}</summary><div class="hlist">${checks.map(c => `<div><i class="${c.level}"></i><span><b>${esc(c.check)}</b> — ${esc(c.detail)}</span></div>`).join('')}</div></details>
+      <div class="foot">Проверка ${esc(hm(h.checked_utc))} (${esc(ageTxt(h.checked_utc))} назад). Рынок — ${esc((A.market_books || []).join(', '))}; только цена — ${esc((A.price_only_books || []).join(', '))}.</div></section>`;
+    const q = A.quality || {};
+    const qual = `<section class="panelbox"><h3><span>Качество данных последнего расчёта</span>${LevelPill(q.critical ? 'fail' : q.stale || q.warn ? 'warn' : 'ok')}</h3>
+      <div class="kpis">${StatsCard('CRITICAL', q.critical ?? '—', q.critical ? 'neg' : '')}${StatsCard('STALE', q.stale ?? '—')}${StatsCard('WARN', q.warn ?? '—')}</div>
+      ${(q.top || []).length ? `<div class="hlist">${q.top.map(t => `<div><i class="warn"></i><span>${esc(t.what)} — ${t.n}</span></div>`).join('')}</div>` : ''}
+      <div class="foot">CRITICAL и STALE автоматически дают PASS по матчу.</div></section>`;
+    return `<div class="ana-grid">${val}${paper}${real}${s8}${health}${qual}</div>`;
   }
 
   // ---------- навигация и маршрутизация ----------
@@ -672,8 +789,8 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     view.innerHTML = LoadingState(3);
     try { S.index = (await getJson('data/index.json')).dates || []; }
     catch (e) { view.innerHTML = EmptyState('Не удалось загрузить данные', esc(e.message), true); BottomNavigation(); return; }
-    const [meta, bets] = await Promise.allSettled([getJson('data/meta.json'), getJson('data/bets.json')]);
-    S.meta = meta.status === 'fulfilled' ? meta.value : null; S.betsDoc = bets.status === 'fulfilled' ? bets.value : null;
+    const [meta, bets, ana] = await Promise.allSettled([getJson('data/meta.json'), getJson('data/bets.json'), getJson('data/analytics.json')]);
+    S.meta = meta.status === 'fulfilled' ? meta.value : null; S.betsDoc = bets.status === 'fulfilled' ? bets.value : null; S.ana = ana.status === 'fulfilled' ? ana.value : null;
     buildDays();
     const h = location.hash.slice(1);
     if (sections.some(([k]) => k === h)) S.section = h;
