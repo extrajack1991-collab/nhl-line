@@ -420,6 +420,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
           <tr><td>EV<small>по итоговой вероятности</small></td><td class="${evc(h.ev)}">${h.ev == null ? '—' : sPct(h.ev)}</td><td class="${evc(a.ev)}">${a.ev == null ? '—' : sPct(a.ev)}</td></tr>
           <tr><td>Решение</td><td>${esc(h.decision || '—')}</td><td>${esc(a.decision || '—')}</td></tr>
         </tbody></table></div>
+      ${S.ana?.gate && !S.ana.gate.proven ? `<div class="foot"><b>BET невозможен:</b> преимущество модели над рынком не доказано на независимых данных — подробности в «Аналитике».</div>` : ''}
       ${why ? `<details class="foot"><summary>Почему PASS</summary>${esc(why)}</details>` : ''}
       ${QuoteTimes(g)}
     </div>`;
@@ -735,7 +736,11 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
       <div class="kpis">${StatsCard('CRITICAL', q.critical ?? '—', q.critical ? 'neg' : '')}${StatsCard('STALE', q.stale ?? '—')}${StatsCard('WARN', q.warn ?? '—')}</div>
       ${(q.top || []).length ? `<div class="hlist">${q.top.map(t => `<div><i class="warn"></i><span>${esc(t.what)} — ${t.n}</span></div>`).join('')}</div>` : ''}
       <div class="foot">CRITICAL и STALE автоматически дают PASS по матчу.</div></section>`;
-    return `<div class="ana-grid">${val}${paper}${real}${s8}${health}${qual}</div>`;
+    const gt = A.gate;
+    const gate = gt ? `<section class="panelbox" style="grid-column:1 / -1"><h3><span>Правило BET</span>${gt.proven ? '<span class="pill ok">преимущество доказано</span>' : '<span class="pill na">BET невозможен</span>'}</h3>
+      <div>${esc(gt.reason)}.</div>
+      <div class="foot">BET возможен, только если на независимых данных выполнено оба условия: не меньше ${gt.min_matches} матчей, где итог приложения значимо лучше рынка по log loss, и не меньше ${gt.min_bets} ставок по правилу «${esc(gt.bet_rule)}» с CLV-EV значимо выше нуля. Пока условия не выполнены, все решения — PASS, даже при положительном EV.</div></section>` : '';
+    return `<div class="ana-grid">${gate}${val}${paper}${real}${s8}${health}${qual}</div>`;
   }
 
   // ---------- навигация и маршрутизация ----------
