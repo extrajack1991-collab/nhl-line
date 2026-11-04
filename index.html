@@ -562,6 +562,12 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     view.innerHTML = `
       <div class="sec-h"><h2>Игры · ${esc(dayParts(S.date).day)}</h2><span>время ${esc(tzName || 'местное')}</span></div>
       ${!day ? `<div class="note"><b>Линия на этот день ещё не рассчитана.</b> Показано расписание НХЛ; коэффициенты появятся после расчёта в день матчей.</div>` : ''}
+      ${(() => { const c = day?.completeness; if (!c) return ''; const parts = [];
+        if (c.missing?.length) parts.push(`нет в линии: ${esc(c.missing.join(', '))}`);
+        if (c.no_market?.length) parts.push(`без рыночной вероятности: ${esc(c.no_market.join(', '))}`);
+        if (c.no_marathon?.length) parts.push(`без цен Марафона: ${c.no_marathon.length}`);
+        if (c.no_fonbet?.length) parts.push(`без цен Fonbet: ${c.no_fonbet.length}`);
+        return parts.length ? `<div class="note"><b>Линия неполная${c.expected != null ? ` — ${c.present} из ${c.expected} матчей` : ''}.</b> ${parts.join('; ')}.</div>` : ''; })()}
       <div class="games">${games.map(GameCard).join('')}</div>
       <div class="foot">П1 / X / П2 — исход основного времени (60 минут), как у Fonbet и Марафона; П1 — хозяева. Цена Марафона, если её нет — Fonbet; серым — справедливый коэффициент модели. Зелёная рамка — цена выше справедливой. ${day ? `Решения модели: ${bets ? bets + ' BET' : 'все PASS'} — аудит не подтвердил перевес модели над рынком.` : ''} Проценты у команд — вероятность победы с ОТ и буллитами.</div>`;
   }
@@ -721,7 +727,8 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
       <div class="foot">CLV-EV = вероятность закрытия рынка без маржи × цена входа − 1: ожидаемая доходность, если закрытие — честная вероятность. Цена — лучшая из книг США на момент расчёта, закрытие — ESPN.</div></section>`;
     const r = A.real_bets || {};
     const real = `<section class="panelbox"><h3><span>Журнал реальных ставок</span>${StatusPill(r.status, r.settled, r.required_n)}</h3>
-      <div class="kpis">${StatsCard('Ставок', r.settled)}${StatsCard('Итог', money(r.profit), r.profit > 0 ? 'pos' : r.profit < 0 ? 'neg' : '')}${StatsCard('ROI', sPct(r.roi), r.roi > 0 ? 'pos' : r.roi < 0 ? 'neg' : '')}${StatsCard('Без 2 лучших', money(r.profit_without_top2), r.profit_without_top2 > 0 ? 'pos' : 'neg')}${StatsCard('CLV известен', `${r.clv_known} из ${r.n}`)}${StatsCard('Со временем', `${r.with_time} из ${r.n}`)}</div>
+      <div class="kpis">${StatsCard('Ставок', r.settled)}${StatsCard('Итог', money(r.profit), r.profit > 0 ? 'pos' : r.profit < 0 ? 'neg' : '')}${StatsCard('ROI', sPct(r.roi), r.roi > 0 ? 'pos' : r.roi < 0 ? 'neg' : '')}${StatsCard('Без 2 лучших', money(r.profit_without_top2), r.profit_without_top2 > 0 ? 'pos' : 'neg')}${StatsCard('CLV известен', `${r.clv_known} из ${r.n}`)}${StatsCard('Полных записей', `${r.complete_records ?? 0} из ${r.n}`)}</div>
+      ${r.missing_top?.length ? `<div class="foot">Чаще всего не хватает: ${esc(r.missing_top.join('; '))}. Новые ставки — через add_bet.ps1 с -Reason и -DecisionOdds; старые записи не дополняются догадками.</div>` : ''}
       <div class="foot">Ставка 1 единица. Последняя запись — ${r.last_bet_day ? esc(dayParts(r.last_bet_day.slice(0, 4) + '-' + r.last_bet_day.slice(4, 6) + '-' + r.last_bet_day.slice(6)).day) : '—'}. Без времени ставки CLV и исполнение не оцениваются.</div></section>`;
     const s8 = `<section class="panelbox"><h3><span>Этап 8 · скорость реакции рынка</span></h3>
       <div class="ttab ci"><table><thead><tr><th>Сигнал</th><th>Класс</th><th>n</th><th>CLV-EV</th></tr></thead><tbody>${(A.stage8 || []).map(x => `<tr><td>${esc(x.candidate)}<small>${StatusPill(x.status, x.n, 100)} · test ${x.n_test} · пересмотр ${esc(x.next_review)}</small></td><td>${esc(x.class)}</td><td>${x.n}</td><td>${x.clv == null ? '—' : sPct(x.clv) + `<small class="nw">[${sPct(x.lo)}; ${sPct(x.hi)}]</small>`}</td></tr>`).join('')}</tbody></table></div>
@@ -731,6 +738,11 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
       <div class="hlist">${(bad.length ? bad : checks.slice(0, 3)).map(c => `<div><i class="${c.level}"></i><span><b>${esc(c.check)}</b> — ${esc(c.detail)}</span></div>`).join('')}</div>
       <details class="foot"><summary>Все проверки · ${checks.length}${bad.length ? ', с замечаниями ' + bad.length : ', замечаний нет'}</summary><div class="hlist">${checks.map(c => `<div><i class="${c.level}"></i><span><b>${esc(c.check)}</b> — ${esc(c.detail)}</span></div>`).join('')}</div></details>
       <div class="foot">Проверка ${esc(hm(h.checked_utc))} (${esc(ageTxt(h.checked_utc))} назад). Рынок — ${esc((A.market_books || []).join(', '))}; только цена — ${esc((A.price_only_books || []).join(', '))}.</div></section>`;
+    // источники: дата самих данных и покрытие отдельно от успешности загрузки (контрольный аудит 11.2026)
+    const srcs = A.sources || [];
+    const srcBox = srcs.length ? `<section class="panelbox" style="grid-column:1 / -1"><h3><span>Источники данных · расчёт ${esc(A.sources_day ? dayParts(A.sources_day).day : '')}</span></h3>
+      <div class="ttab"><table style="min-width:560px"><thead><tr><th>Источник</th><th>Загружено</th><th>Покрытие</th><th>Ошибок, 7 дн.</th></tr></thead><tbody>${srcs.map(s => `<tr><td>${esc(s.source)}<small>${esc(s.use)}</small><small>${esc(s.data_as_of || '')}</small></td><td>${esc(hm(s.last_ok))}<small>${esc(ageTxt(s.last_ok))} назад</small></td><td>${s.total ? `${s.covered} из ${s.total}<small>${pct(s.coverage, 0)}</small>` : '—'}</td><td class="${s.error_rate_7d > 0.2 ? 'neg' : ''}">${s.error_rate_7d == null ? '—' : pct(s.error_rate_7d, 0)}<small>запросов ${s.requests_7d}</small></td></tr>`).join('')}</tbody></table></div>
+      <div class="foot">«Загружено» — последняя успешная загрузка; свежесть самих данных — отдельно: у MoneyPuck сравнивается число сыгранных матчей с таблицей НХЛ, отставание на 2+ матча даёт PASS по матчу.</div></section>` : '';
     const q = A.quality || {};
     const qual = `<section class="panelbox"><h3><span>Качество данных последнего расчёта</span>${LevelPill(q.critical ? 'fail' : q.stale || q.warn ? 'warn' : 'ok')}</h3>
       <div class="kpis">${StatsCard('CRITICAL', q.critical ?? '—', q.critical ? 'neg' : '')}${StatsCard('STALE', q.stale ?? '—')}${StatsCard('WARN', q.warn ?? '—')}</div>
@@ -739,8 +751,8 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     const gt = A.gate;
     const gate = gt ? `<section class="panelbox" style="grid-column:1 / -1"><h3><span>Правило BET</span>${gt.proven ? '<span class="pill ok">преимущество доказано</span>' : '<span class="pill na">BET невозможен</span>'}</h3>
       <div>${esc(gt.reason)}.</div>
-      <div class="foot">BET возможен, только если на независимых данных выполнены оба условия: не меньше ${gt.min_matches} матчей, где итог приложения значимо лучше рынка по log loss, и не меньше ${gt.min_bets} ставок по правилу «${esc(gt.bet_rule)}» с CLV-EV значимо выше нуля. Пока условия не выполнены, все решения — PASS, даже при положительном EV.</div></section>` : '';
-    return `<div class="ana-grid">${gate}${val}${paper}${real}${s8}${health}${qual}</div>`;
+      <div class="foot">BET возможен, только если на независимых данных выполнены оба условия: итог приложения значимо лучше рынка по log loss и не меньше ${gt.min_bets} ставок по правилу «${esc(gt.bet_rule)}» с CLV-EV значимо выше нуля. Проверка — только в контрольных точках 300 / 600 / 900 / 1200 матчей текущей версии алгоритма${A.gate_stats ? ` (сейчас ${A.gate_stats.n_version}, следующая точка — ${A.gate_stats.next_checkpoint ?? '—'})` : ''}, с 98,75% интервалом: ежедневная проверка на растущей выборке давала бы ложное «доказано». Пока условия не выполнены, все решения — PASS, даже при положительном EV.</div></section>` : '';
+    return `<div class="ana-grid">${gate}${val}${paper}${real}${s8}${health}${qual}${srcBox}</div>`;
   }
 
   // ---------- навигация и маршрутизация ----------
