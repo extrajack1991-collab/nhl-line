@@ -70,6 +70,7 @@ main .wrap { padding-block: 14px calc(var(--nav-h) + env(safe-area-inset-bottom,
 .tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end }
 .tag { font: 600 10.5px var(--f-body); letter-spacing: .06em; text-transform: uppercase; border-radius: 6px; padding: 2px 7px; background: var(--surface-2); color: var(--muted) }
 .tag.bet { background: var(--pos); color: var(--bg) }
+.tag.old { background: var(--surface-2); color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1.5px }
 .tag.live { background: var(--brand); color: #fff }
 .tag.fin { background: var(--surface-2); color: var(--text) }
 .teams { display: grid; gap: 6px }
@@ -195,6 +196,8 @@ main .wrap { padding-block: 14px calc(var(--nav-h) + env(safe-area-inset-bottom,
 .kv dt { color: var(--muted) } .kv dd { margin: 0; text-align: right; font-family: var(--f-num) }
 .note, .foot { font-size: 12.5px; color: var(--muted) }
 .note { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--warn); border-radius: 10px; padding: 10px 12px }
+.note.stale { border-left-color: var(--neg) } .note.stale b:first-child { color: var(--neg) }
+.note.cur { border-left-color: var(--pos) }
 .note b { color: var(--text) }
 
 /* состояния */
@@ -364,7 +367,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
   function GameCard(g, i) {
     const res = S.meta?.results?.[g.id], start = g.start_utc, now = Date.now(), st = new Date(start).getTime();
     const state = res ? `<span class="tag fin">${res.end === 'REG' ? 'Финал' : 'Финал · ' + res.end}</span>` : now > st && now - st < 4 * 3600e3 ? `<span class="tag live">Идёт</span>` : '';
-    const bet = g.best_bet && g.best_bet !== 'PASS' ? `<span class="tag bet" title="Рекомендация модели">BET</span>` : '';
+    const bet = g.best_bet && g.best_bet !== 'PASS' ? (actionable(g) ? `<span class="tag bet" title="Рекомендация модели">BET</span>` : `<span class="tag old" title="Линия не текущая или матч начался: решение не действует">BET · не действует</span>`) : '';
     const fav = g.favorite ? `<span class="tag" title="Прогноз: вероятнее победит">Прогноз ${esc(tname(g.favorite.abbr, g.favorite.name))} ${pct(g.favorite.p, 0)}</span>` : '';
     const o = g.regulation_lines ? Odds(g) : null;
     const open = S.expanded.has(g.key);
@@ -382,6 +385,33 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
   // ---------- достоверность (этап 9 аудита) ----------
   const ageTxt = iso => { if (!iso) return '—'; const m = (Date.now() - new Date(iso).getTime()) / 60000; return m < 60 ? `${Math.max(0, Math.round(m))} мин` : m < 2880 ? `${Math.round(m / 60)} ч` : `${Math.round(m / 1440)} дн`; };
   const hm = iso => iso ? new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+  // ---------- статус линии (audit/bet_gate_final_202611/STALE_LINE_PROTECTION.md) ----------
+  // Текущая — расчёт не старше LINE_MAX_AGE_H ч и после него не было неудачного расчёта этого дня (data/run_status.json);
+  // последняя успешная (STALE) — старше или после неё расчёт не удался; архивная — все матчи дня начались.
+  // Решение BET действует только в текущей линии и только до начала матча; в остальных случаях показывается «BET · не действует».
+  const LINE_MAX_AGE_H = 3;
+  const nowMs = () => S.asOf ?? Date.now();
+  const ageH = h => h < 1 ? `${Math.max(0, Math.round(h * 60))} мин` : h < 48 ? `${(Math.round(h * 10) / 10).toString().replace('.', ',')} ч` : `${Math.round(h / 24)} дн`;
+  function lineState(day) {
+    if (!day?.generated_utc) return { kind: 'none' };
+    const gen = new Date(day.generated_utc).getTime(), age = (nowMs() - gen) / 3600e3;
+    const starts = (day.games || []).map(g => new Date(g.start_utc).getTime()).filter(x => !isNaN(x));
+    const rs = S.runStatus;
+    if (starts.length && nowMs() >= Math.max(...starts)) return { kind: 'archive', gen, age, reason: 'все матчи дня начались' };
+    if (rs && rs.date === day.date && rs.status === 'fail' && new Date(rs.attempt_utc).getTime() > gen)
+      return { kind: 'stale', gen, age, reason: `расчёт ${hm(rs.attempt_utc)} не выполнен${rs.step ? ' (шаг ' + rs.step + ')' : ''}${rs.reason ? ': ' + rs.reason : ''}` };
+    if (age > LINE_MAX_AGE_H) return { kind: 'stale', gen, age, reason: `нового расчёта нет дольше ${LINE_MAX_AGE_H} ч` };
+    return { kind: 'current', gen, age };
+  }
+  const actionable = g => S.line?.kind === 'current' && nowMs() < new Date(g.start_utc).getTime();
+  const decTxt = (d, act) => d === 'BET' && !act ? 'BET · не действует' : (d || '—');
+  function LineBanner(st) {
+    if (!st || st.kind === 'none') return '';
+    const when = hm(new Date(st.gen).toISOString()), age = ageH(st.age);
+    if (st.kind === 'current') return `<div class="note cur" data-line="current"><b>Текущая линия.</b> Расчёт ${esc(when)}, ${esc(age)} назад. Коэффициенты меняются: перед ставкой сверьте цену у букмекера.</div>`;
+    const title = st.kind === 'archive' ? 'Архивная линия' : 'Последняя успешная линия · STALE';
+    return `<div class="note stale" data-line="${st.kind}"><b>${title}.</b> Расчёт ${esc(when)}, возраст данных ${esc(age)}. Причина: ${esc(st.reason)}. <b>Решения BET этой линии не действуют</b> — это не текущая рекомендация.</div>`;
+  }
   // статус выборки: показываем всегда вместе с n
   const StatusPill = (status, n, req) => status === 'insufficient' ? `<span class="pill na" title="Для вывода нужно не меньше ${req}">недостаточно данных · n ${n} из ${req}</span>` : `<span class="pill ok">n ${n}</span>`;
   const LevelPill = l => `<span class="pill ${l === 'ok' ? 'ok' : l === 'fail' ? 'fail' : l === 'warn' ? 'warn' : 'na'}">${{ ok: 'норма', warn: 'предупреждение', fail: 'сбой' }[l] || 'нет данных'}</span>`;
@@ -409,7 +439,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     const evc = v => v == null ? '' : v > 0 ? 'pos' : 'neg';
     const why = [h.reasons, a.reasons].filter(Boolean)[0] || '';
     return `<div class="trust">
-      <h3><span>Прогноз и решение · победа с ОТ</span><span class="tag ${g.best_bet && g.best_bet !== 'PASS' ? 'bet' : ''}">${esc(g.best_bet && g.best_bet !== 'PASS' ? 'BET' : 'PASS')}</span></h3>
+      <h3><span>Прогноз и решение · победа с ОТ</span>${(() => { const isBet = g.best_bet && g.best_bet !== 'PASS', act = actionable(g); return `<span class="tag ${isBet ? (act ? 'bet' : 'old') : ''}">${esc(isBet ? decTxt('BET', act) : 'PASS')}</span>`; })()}</h3>
       <div class="ttab fit"><table>
         <thead><tr><th></th><th>П1 · ${esc(g.home.abbr)}</th><th>П2 · ${esc(g.away.abbr)}</th></tr></thead>
         <tbody>
@@ -418,7 +448,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
           <tr class="final"><td>Итог приложения<small>${Math.round((p.market_weight ?? 0.9) * 100)}% рынок + ${Math.round((1 - (p.market_weight ?? 0.9)) * 100)}% модель</small></td><td>${bh}</td><td>${ba}</td></tr>
           <tr><td>Лучшая цена<small>книги рынка</small></td><td>${odd(h.price)}<small>${esc(h.book || '').replace(/\//g, ', ')}</small></td><td>${odd(a.price)}<small>${esc(a.book || '').replace(/\//g, ', ')}</small></td></tr>
           <tr><td>EV<small>по итоговой вероятности</small></td><td class="${evc(h.ev)}">${h.ev == null ? '—' : sPct(h.ev)}</td><td class="${evc(a.ev)}">${a.ev == null ? '—' : sPct(a.ev)}</td></tr>
-          <tr><td>Решение</td><td>${esc(h.decision || '—')}</td><td>${esc(a.decision || '—')}</td></tr>
+          <tr><td>Решение</td><td>${esc(decTxt(h.decision, actionable(g)))}</td><td>${esc(decTxt(a.decision, actionable(g)))}</td></tr>
         </tbody></table></div>
       ${S.ana?.gate && !S.ana.gate.proven ? `<div class="foot"><b>BET невозможен:</b> преимущество модели над рынком не доказано на независимых данных — подробности в «Аналитике».</div>` : ''}
       ${why ? `<details class="foot"><summary>Почему PASS</summary>${esc(why)}</details>` : ''}
@@ -555,13 +585,14 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     catch (e) { view.innerHTML = EmptyState('Не удалось загрузить данные', esc(e.message), true); return; }
     if (S.section !== 'games' || S.open) return;
     const games = day ? day.games : schedGames(d);
-    gen.textContent = day ? 'расчёт ' + new Date(day.generated_utc).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    S.line = lineState(day);
+    gen.textContent = day ? 'расчёт ' + new Date(day.generated_utc).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + (S.line.kind === 'stale' ? ' · STALE' : S.line.kind === 'archive' ? ' · архив' : '') : '';
     if (!games.length) { view.innerHTML = EmptyState('В этот игровой день матчей нет', ''); return; }
     S.games = games;
     const bets = games.filter(g => g.best_bet && g.best_bet !== 'PASS').length;
     view.innerHTML = `
       <div class="sec-h"><h2>Игры · ${esc(dayParts(S.date).day)}</h2><span>время ${esc(tzName || 'местное')}</span></div>
-      ${!day ? `<div class="note"><b>Линия на этот день ещё не рассчитана.</b> Показано расписание НХЛ; коэффициенты появятся после расчёта в день матчей.</div>` : ''}
+      ${!day ? `<div class="note"><b>Линия на этот день ещё не рассчитана.</b> Показано расписание НХЛ; коэффициенты появятся после расчёта в день матчей.</div>` : LineBanner(S.line)}
       ${(() => { const c = day?.completeness; if (!c) return ''; const parts = [];
         if (c.missing?.length) parts.push(`нет в линии: ${esc(c.missing.join(', '))}`);
         if (c.no_market?.length) parts.push(`без рыночной вероятности: ${esc(c.no_market.join(', '))}`);
@@ -569,12 +600,12 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
         if (c.no_fonbet?.length) parts.push(`без цен Fonbet: ${c.no_fonbet.length}`);
         return parts.length ? `<div class="note"><b>Линия неполная${c.expected != null ? ` — ${c.present} из ${c.expected} матчей` : ''}.</b> ${parts.join('; ')}.</div>` : ''; })()}
       <div class="games">${games.map(GameCard).join('')}</div>
-      <div class="foot">П1 / X / П2 — исход основного времени (60 минут), как у Fonbet и Марафона; П1 — хозяева. Цена Марафона, если её нет — Fonbet; серым — справедливый коэффициент модели. Зелёная рамка — цена выше справедливой. ${day ? `Решения модели: ${bets ? bets + ' BET' : 'все PASS'} — аудит не подтвердил перевес модели над рынком.` : ''} Проценты у команд — вероятность победы с ОТ и буллитами.</div>`;
+      <div class="foot">П1 / X / П2 — исход основного времени (60 минут), как у Fonbet и Марафона; П1 — хозяева. Цена Марафона, если её нет — Fonbet; серым — справедливый коэффициент модели. Зелёная рамка — цена выше справедливой. ${day ? `Решения модели: ${bets ? bets + ' BET' + (S.line.kind === 'current' ? '' : ' (не действуют: линия не текущая)') : 'все PASS'} — аудит не подтвердил перевес модели над рынком.` : ''} Проценты у команд — вероятность победы с ОТ и буллитами.</div>`;
   }
 
   // детали матча — прежние вкладки линии
   const colhead = `<div class="colhead"><span>Исход</span><span>Вероятн.</span><span>Справ.</span></div>`;
-  function bookChips(books) { return books?.length ? `<div class="books">${books.map(b => `<span class="book ${b.ev > 0 ? 'pos' : ''}" title="${esc(b.source === 'Fanatics' ? 'Только цена: Fanatics не входит в рыночную вероятность. ' : '')}${esc(b.reasons || '')}">${esc(b.source)}${b.book && b.book !== b.source ? ' ' + esc(b.book) : ''} <b>${odd(b.odds)}</b> · EV ${b.ev == null ? '—' : sPct(b.ev)}${b.decision ? ' · ' + esc(b.decision) : ''}</span>`).join('')}</div>` : ''; }
+  function bookChips(books) { return books?.length ? `<div class="books">${books.map(b => `<span class="book ${b.ev > 0 ? 'pos' : ''}" title="${esc(b.source === 'Fanatics' ? 'Только цена: Fanatics не входит в рыночную вероятность. ' : '')}${esc(b.reasons || '')}">${esc(b.source)}${b.book && b.book !== b.source ? ' ' + esc(b.book) : ''} <b>${odd(b.odds)}</b> · EV ${b.ev == null ? '—' : sPct(b.ev)}${b.decision ? ' · ' + esc(decTxt(b.decision, S.actNow)) : ''}</span>`).join('')}</div>` : ''; }
   function lineRow(l, sub) {
     const push = l.push > 0.0005 ? ` · возврат ${pct(l.push)}` : '';
     return `<div class="row"><div class="lab">${esc(l.label)}<small>${esc(sub || l.period)}${push}</small><div class="pbar"><i style="width:${Math.max(0, Math.min(100, (l.p || 0) * 100)).toFixed(1)}%"></i></div></div>
@@ -605,8 +636,10 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     const tabs = [['winner', 'Победитель'], ['totals', 'Тоталы'], ['tt', 'Инд. тоталы'], ['exact', 'Точный счёт'], ['hcp', 'Форы'], ['combo', 'Комбинации']];
     const side = (abbr, nm) => `<div>${Logo(abbr)}<div class="nm">${esc(nm?.name || tname(abbr))}</div><small>${nm?.goalie ? `<span class="dot${nm.goalie_status === 'Confirmed' ? ' ok' : ''}"></span>${esc(nm.goalie)}` : ''}</small></div>`;
     const o = g.regulation_lines ? Odds(g) : null;
+    S.actNow = actionable(g);   // для значков книг в рынках матча (bookChips)
     return `<div class="sheet">
       <button class="back" type="button" data-close="1">← Игры ${esc(dayParts(S.date).day)}</button>
+      ${S.line && S.line.kind !== 'current' ? LineBanner(S.line) : !S.actNow && S.line?.kind === 'current' ? `<div class="note stale" data-line="started"><b>Матч начался.</b> Решения BET по нему не действуют.</div>` : ''}
       <section class="hero">
         <div class="vs">${side(g.home.abbr, g.home)}<div class="mid">${res ? `<b>${res.fin_home}:${res.fin_away}</b>${res.end !== 'REG' ? res.end : 'финал'}` : `<b>${esc(localTime(g.start_utc))}</b>${esc(new Date(g.start_utc).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }))}`}</div>${side(g.away.abbr, g.away)}</div>
         ${o ? o.html + `<div class="legend"><span>П1 — ${esc(tname(g.home.abbr))}</span><span>${esc(o.src)}</span><span>П2 — ${esc(tname(g.away.abbr))}</span></div>` : ''}
@@ -806,8 +839,11 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     view.innerHTML = LoadingState(3);
     try { S.index = (await getJson('data/index.json')).dates || []; }
     catch (e) { view.innerHTML = EmptyState('Не удалось загрузить данные', esc(e.message), true); BottomNavigation(); return; }
-    const [meta, bets, ana] = await Promise.allSettled([getJson('data/meta.json'), getJson('data/bets.json'), getJson('data/analytics.json')]);
+    const [meta, bets, ana, rs] = await Promise.allSettled([getJson('data/meta.json'), getJson('data/bets.json'), getJson('data/analytics.json'), getJson('data/run_status.json')]);
     S.meta = meta.status === 'fulfilled' ? meta.value : null; S.betsDoc = bets.status === 'fulfilled' ? bets.value : null; S.ana = ana.status === 'fulfilled' ? ana.value : null;
+    S.runStatus = rs.status === 'fulfilled' ? rs.value : null;   // итог последней попытки расчёта (run_day.ps1); нет файла — статус по возрасту линии
+    // проверка сценариев на локальном сервере: ?asof=<ISO> задаёт «сейчас»; на GitHub Pages и claude.ai не действует
+    try { const qa = new URLSearchParams(location.search).get('asof'); if (qa && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) S.asOf = Date.parse(qa); } catch {}
     buildDays();
     const h = location.hash.slice(1);
     if (sections.some(([k]) => k === h)) S.section = h;
