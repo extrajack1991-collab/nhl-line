@@ -59,6 +59,7 @@ main .wrap { padding-block: 14px calc(var(--nav-h) + env(safe-area-inset-bottom,
 .sec-h { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 10px; flex-wrap: wrap }
 .sec-h h2 { margin: 0; font: 600 13px var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted) }
 .sec-h span { font-size: 12px; color: var(--muted) }
+.sec-h .pill { white-space: normal; max-width: 100%; border-radius: 8px; line-height: 1.3 } /* длинная отметка «недостаточно данных» переносится на узком экране */
 
 /* карточка матча */
 .games { display: grid; gap: 10px; grid-template-columns: 1fr }
@@ -73,6 +74,7 @@ main .wrap { padding-block: 14px calc(var(--nav-h) + env(safe-area-inset-bottom,
 .tag.old { background: var(--surface-2); color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1.5px }
 .tag.live { background: var(--brand); color: #fff }
 .tag.fin { background: var(--surface-2); color: var(--text) }
+.tag.wait { background: var(--surface-2); color: var(--muted) }
 .teams { display: grid; gap: 6px }
 .team { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 10px }
 .logo { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--surface-2); overflow: hidden; flex: none }
@@ -92,14 +94,17 @@ main .wrap { padding-block: 14px calc(var(--nav-h) + env(safe-area-inset-bottom,
 .odd.val { border-color: var(--pos); background: var(--pos-soft) }
 .odd.val b { color: var(--pos) }
 .odd.fair b { color: var(--muted) }
-.gfoot { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--muted) }
+.gfoot { display: flex; justify-content: space-between; gap: 2px 8px; font-size: 11.5px; color: var(--muted); flex-wrap: wrap }
 .more { border: 0; border-top: 1px solid var(--line); background: none; padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 12.5px; cursor: pointer; width: 100% }
 .more[aria-expanded="true"] .chev { transform: rotate(180deg) }
 .chev { transition: transform .15s }
 .extra { border-top: 1px solid var(--line); padding: 10px 14px 12px; display: grid; gap: 10px; font-size: 13px }
 .cmp { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px 10px; align-items: center }
-.cmp .l { text-align: right } .cmp .m { color: var(--muted); font-size: 11.5px; text-align: center; text-transform: uppercase; letter-spacing: .05em }
-.form { display: inline-flex; gap: 3px }
+.cmp .l { text-align: right } .cmp .m { color: var(--muted); font-size: 11.5px; text-align: center; text-transform: uppercase; letter-spacing: .05em; max-width: 68px; line-height: 1.2 }
+/* значения не выходят за колонку: длинные названия переносятся, квадратики формы — на вторую строку на узком экране */
+.cmp > span { min-width: 0; overflow-wrap: anywhere; hyphens: auto }
+.form { display: inline-flex; gap: 3px; flex-wrap: wrap; max-width: 100%; vertical-align: middle }
+.cmp .l .form { justify-content: flex-end }
 .fr { width: 18px; height: 18px; border-radius: 5px; display: grid; place-items: center; font: 600 10px var(--f-body); color: var(--bg) }
 .fr.W { background: var(--pos) } .fr.L { background: var(--neg) } .fr.OTL { background: var(--warn) }
 .gk { font-size: 12px; color: var(--muted) }
@@ -107,11 +112,12 @@ main .wrap { padding-block: 14px calc(var(--nav-h) + env(safe-area-inset-bottom,
 .dot.ok { background: var(--pos) }
 
 /* показатели и графики */
-.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px }
-@media (min-width: 700px) { .kpis { grid-template-columns: repeat(6, minmax(0, 1fr)) } }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px } /* столько колонок, сколько помещается: плитки не вылезают и в узкой карточке аналитики на компьютере */
 .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; min-width: 0 }
 .kpi small { color: var(--muted); font-size: 11.5px }
 .kpi b { font: 500 20px/1.2 var(--f-num); font-variant-numeric: tabular-nums; white-space: nowrap }
+/* на телефоне плитки по две в ряд: «23 из 109», «+116,3%» не помещались в треть ширины */
+@media (max-width: 440px) { .kpi b { font-size: clamp(17px, 5vw, 20px) } }
 .kpi b.pos { color: var(--pos) } .kpi b.neg { color: var(--neg) }
 .seg { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; overflow-x: auto; scrollbar-width: none }
 .seg button { flex: 1 0 auto; border: 0; border-radius: 8px; background: none; padding: 7px 10px; font-size: 13px; color: var(--muted); cursor: pointer; white-space: nowrap }
@@ -157,7 +163,8 @@ main .wrap { padding-block: 14px calc(var(--nav-h) + env(safe-area-inset-bottom,
 .vs { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; text-align: center }
 .vs .logo { width: 48px; height: 48px; margin: 0 auto 4px; border-radius: 12px } .vs .logo img { width: 44px; height: 44px }
 .vs .nm { font-weight: 600 } .vs small { display: block; color: var(--muted); font-size: 12px }
-.vs .mid { font: 500 13px var(--f-num); color: var(--muted) }
+.vs .mid { font: 500 13px var(--f-num); color: var(--muted); max-width: 120px; line-height: 1.3; overflow-wrap: anywhere }
+.vs > div { min-width: 0 }   /* колонки команд не сжимаются меньше логотипа из-за длинной подписи итога посередине */
 .vs .mid b { display: block; font: 600 26px/1.1 var(--f-display); color: var(--text) }
 .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; text-align: center }
 .facts div { background: var(--surface-2); border-radius: 10px; padding: 8px 4px }
@@ -213,7 +220,9 @@ main .wrap { padding-block: 14px calc(var(--nav-h) + env(safe-area-inset-bottom,
 .trust { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px }
 .trust h3, .panelbox h3 { margin: 0; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font: 600 12px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
 .ttab { overflow-x: auto }
-.ttab table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 300px }
+.ttab table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 240px }
+/* отметки «недостаточно данных · n … из …» внутри ячейки переносятся, а не наезжают на соседние колонки */
+.ttab td .pill { white-space: normal; border-radius: 8px; max-width: 100%; line-height: 1.3 }
 .ttab th, .ttab td { padding: 7px 8px; border-top: 1px solid var(--line); text-align: right; font-family: var(--f-num); font-variant-numeric: tabular-nums; vertical-align: top }
 .ttab th:first-child, .ttab td:first-child { text-align: left; font-family: var(--f-body) }
 .ttab thead th { border-top: 0; color: var(--muted); font: 600 11px var(--f-body); text-transform: uppercase; letter-spacing: .06em }
@@ -365,8 +374,8 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     ${g.home?.goalie ? `<div class="gk"><span class="dot${g.home.goalie_status === 'Confirmed' ? ' ok' : ''}"></span>${esc(g.home.goalie)} · <span class="dot${g.away.goalie_status === 'Confirmed' ? ' ok' : ''}"></span>${esc(g.away.goalie)} <span>(зелёная точка — вратарь подтверждён)</span></div>` : ''}`;
   }
   function GameCard(g, i) {
-    const res = S.meta?.results?.[g.id], start = g.start_utc, now = Date.now(), st = new Date(start).getTime();
-    const state = res ? `<span class="tag fin">${res.end === 'REG' ? 'Финал' : 'Финал · ' + res.end}</span>` : now > st && now - st < 4 * 3600e3 ? `<span class="tag live">Идёт</span>` : '';
+    const res = S.meta?.results?.[g.id], start = g.start_utc;
+    const state = gameStatus(g, res).tag;
     const bet = g.best_bet && g.best_bet !== 'PASS' ? (actionable(g) ? `<span class="tag bet" title="Рекомендация модели">BET</span>` : `<span class="tag old" title="Линия не текущая или матч начался: решение не действует">BET · не действует</span>`) : '';
     const fav = g.favorite ? `<span class="tag" title="Прогноз: вероятнее победит">Прогноз ${esc(tname(g.favorite.abbr, g.favorite.name))} ${pct(g.favorite.p, 0)}</span>` : '';
     const o = g.regulation_lines ? Odds(g) : null;
@@ -376,7 +385,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
         <div class="gtop"><span class="when">${esc(localTime(start))}</span><span class="tags">${state}${bet}${fav}</span></div>
         <div class="teams">${TeamRow(g.home.abbr, 'home', g, res)}${TeamRow(g.away.abbr, 'away', g, res)}</div>
         ${o ? o.html : `<div class="odds">${['П1', 'X', 'П2'].map(k => `<div class="odd fair"><small>${k}</small><b>—</b></div>`).join('')}</div>`}
-        <div class="gfoot"><span>${o ? `Осн. время · ${esc(o.src)}${(() => { const t = /Марафон/.test(o.src) ? g.quotes?.marathon_utc : /Fonbet/.test(o.src) ? g.quotes?.fonbet_utc : null; return t ? ' · ' + esc(hm(t)) : ''; })()}` : 'Линия ещё не рассчитана'}</span>${res && res.end !== 'REG' ? `<span>60 мин: ${res.reg_home}:${res.reg_away}</span>` : ''}</div>
+        <div class="gfoot"><span>${o ? `Осн. время · ${esc(o.src)}${(() => { const t = /Марафон/.test(o.src) ? g.quotes?.marathon_utc : /Fonbet/.test(o.src) ? g.quotes?.fonbet_utc : null; return t ? ' · ' + esc(hm(t)) : ''; })()}` : 'Линия ещё не рассчитана'}</span>${res ? `<span>итог: ${res.end === 'REG' ? 'основное время' : `${res.end === 'OT' ? 'овертайм' : 'буллиты'} · 60 мин ${res.reg_home}:${res.reg_away}`}</span>` : ''}</div>
       </button>
       <button class="more" type="button" data-more="${esc(g.key)}" aria-expanded="${open}"><span>Форма и статистика команд</span><span class="chev">▾</span></button>
       ${open ? `<div class="extra">${GameExtra(g, g.away.abbr, g.home.abbr)}</div>` : ''}
@@ -385,6 +394,20 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
   // ---------- достоверность (этап 9 аудита) ----------
   const ageTxt = iso => { if (!iso) return '—'; const m = (Date.now() - new Date(iso).getTime()) / 60000; return m < 60 ? `${Math.max(0, Math.round(m))} мин` : m < 2880 ? `${Math.round(m / 60)} ч` : `${Math.round(m / 1440)} дн`; };
   const hm = iso => iso ? new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+  // ---------- итог матча: результаты публикуются вечерним расчётом (data/meta.json, results.csv) ----------
+  // end: REG — основное время, OT — овертайм, SO — буллиты. Счёт — хозяева:гости (как порядок команд на карточке).
+  const END_TXT = { REG: 'в основное время', OT: 'в овертайме', SO: 'по буллитам' };
+  const endWord = e => e === 'OT' ? 'ОТ ' : e === 'SO' ? 'буллиты ' : '';
+  const GAME_LEN_H = 4;   // после этого срока без результата матч считается завершённым, счёт ожидается
+  function gameStatus(g, res) {
+    const st = new Date(g.start_utc).getTime(), now = nowMs();
+    if (res) return { kind: 'fin', tag: `<span class="tag fin" title="Матч завершён ${END_TXT[res.end] || ''}">Завершён · ${endWord(res.end)}${res.fin_home}:${res.fin_away}</span>` };
+    if (now > st && now - st < GAME_LEN_H * 3600e3) return { kind: 'live', tag: `<span class="tag live">Идёт</span>` };
+    if (now >= st + GAME_LEN_H * 3600e3) return { kind: 'wait', tag: `<span class="tag wait" title="Счёт появится после вечернего расчёта линии">Завершён · счёт ожидается</span>` };
+    return { kind: 'sched', tag: '' };
+  }
+  // подпись под счётом в шапке матча: «завершён в овертайме · 60 мин 2:2»
+  const finLine = res => `завершён ${END_TXT[res.end] || ''}${res.end !== 'REG' ? ` · 60 мин ${res.reg_home}:${res.reg_away}` : ''}`;
   // ---------- статус линии (audit/bet_gate_final_202611/STALE_LINE_PROTECTION.md) ----------
   // Текущая — расчёт не старше LINE_MAX_AGE_H ч и после него не было неудачного расчёта этого дня (data/run_status.json);
   // последняя успешная (STALE) — старше или после неё расчёт не удался; архивная — все матчи дня начались.
@@ -472,8 +495,13 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     const ticks = [lo + (hi - lo) * 0.1, (lo + hi) / 2, hi - (hi - lo) * 0.1];
     let g = ticks.map(t => `<line class="grid" x1="${L}" x2="${W - R}" y1="${ys(t).toFixed(1)}" y2="${ys(t).toFixed(1)}"/><text class="ax" x="${L - 5}" y="${(ys(t) + 3).toFixed(1)}" text-anchor="end">${esc(fmt(t))}</text>`).join('');
     if (zero && lo < 0 && hi > 0) g += `<line class="zero" x1="${L}" x2="${W - R}" y1="${ys(0).toFixed(1)}" y2="${ys(0).toFixed(1)}"/>`;
-    const step = Math.max(1, Math.ceil(n / 5));
-    const xl = pts.map((p, i) => (i % step === 0 || i === n - 1) ? `<text class="ax" x="${xs(i).toFixed(1)}" y="${H - 6}" text-anchor="middle">${esc(p.x)}</text>` : '').join('');
+    // подписи оси X: каждая step-я и последняя; если последняя ближе MINGAP к предыдущей, предыдущая убирается (раньше «5 нояб» и «7 нояб» налезали);
+    // у линии крайние подписи прижаты к краям (text-anchor start/end), иначе крайняя выходила за рамку графика
+    const step = Math.max(1, Math.ceil(n / 5)), MINGAP = 46;
+    const keep = []; for (let i = 0; i < n; i++) if (i % step === 0) keep.push(i);
+    if (keep[keep.length - 1] !== n - 1) { if (xs(n - 1) - xs(keep[keep.length - 1]) < MINGAP && keep.length > 1) keep.pop(); keep.push(n - 1); }
+    const anchor = i => kind === 'bar' || n === 1 ? 'middle' : i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle';
+    const xl = keep.map(i => `<text class="ax" x="${xs(i).toFixed(1)}" y="${H - 6}" text-anchor="${anchor(i)}">${esc(pts[i].x)}</text>`).join('');
     let marks = '';
     if (kind === 'bar') {
       const bw = Math.max(4, Math.min(28, (W - L - R) / n * 0.6)), y0 = ys(Math.max(lo, Math.min(hi, 0)));
@@ -485,7 +513,9 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
         + pts.map((p, i) => `<circle class="pt${i === n - 1 ? ' last' : ''}" cx="${xs(i).toFixed(1)}" cy="${ys(p.y).toFixed(1)}" r="${i === n - 1 ? 4 : 3}"/>`).join('');
     }
     const cw = kind === 'bar' || n === 1 ? (W - L - R) / n : (W - L - R) / (n - 1);
-    const hits = pts.map((p, i) => `<rect class="hit" x="${(xs(i) - cw / 2).toFixed(1)}" y="0" width="${cw.toFixed(1)}" height="${H - B}" data-tip="${esc(p.tip ?? `${p.x}: ${fmt(p.y)}`)}" data-cx="${(xs(i) / W).toFixed(4)}" data-cy="${(ys(p.y) / H).toFixed(4)}"/>`).join('');
+    // невидимые области подсказок — в пределах графика (крайние не выходят за рамку)
+    const hx = i => Math.max(L, xs(i) - cw / 2), hw = i => Math.min(W - R, xs(i) + cw / 2) - hx(i);
+    const hits = pts.map((p, i) => `<rect class="hit" x="${hx(i).toFixed(1)}" y="0" width="${hw(i).toFixed(1)}" height="${H - B}" data-tip="${esc(p.tip ?? `${p.x}: ${fmt(p.y)}`)}" data-cx="${(xs(i) / W).toFixed(4)}" data-cy="${(ys(p.y) / H).toFixed(4)}"/>`).join('');
     return `<div class="chart" id="${id}"><h3><span>${esc(title)}</span><b>${headVal ?? ''}</b></h3>
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">${g}${xl}${marks}${hits}</svg></div>`;
   }
@@ -641,7 +671,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
       <button class="back" type="button" data-close="1">← Игры ${esc(dayParts(S.date).day)}</button>
       ${S.line && S.line.kind !== 'current' ? LineBanner(S.line) : !S.actNow && S.line?.kind === 'current' ? `<div class="note stale" data-line="started"><b>Матч начался.</b> Решения BET по нему не действуют.</div>` : ''}
       <section class="hero">
-        <div class="vs">${side(g.home.abbr, g.home)}<div class="mid">${res ? `<b>${res.fin_home}:${res.fin_away}</b>${res.end !== 'REG' ? res.end : 'финал'}` : `<b>${esc(localTime(g.start_utc))}</b>${esc(new Date(g.start_utc).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }))}`}</div>${side(g.away.abbr, g.away)}</div>
+        <div class="vs">${side(g.home.abbr, g.home)}<div class="mid">${res ? `<b>${res.fin_home}:${res.fin_away}</b>${esc(finLine(res))}` : gameStatus(g, null).kind === 'wait' ? `<b>${esc(localTime(g.start_utc))}</b>завершён · счёт ожидается` : `<b>${esc(localTime(g.start_utc))}</b>${esc(new Date(g.start_utc).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }))}`}</div>${side(g.away.abbr, g.away)}</div>
         ${o ? o.html + `<div class="legend"><span>П1 — ${esc(tname(g.home.abbr))}</span><span>${esc(o.src)}</span><span>П2 — ${esc(tname(g.away.abbr))}</span></div>` : ''}
         ${reg ? `<div class="facts"><div><b>${dec(g.home.xg)}</b><span>ожид. голов ${esc(g.home.abbr)}</span></div><div><b>${dec(g.exp_total)}</b><span>ожид. тотал</span></div><div><b>${dec(g.away.xg)}</b><span>ожид. голов ${esc(g.away.abbr)}</span></div></div>
         <div class="regbar" role="img" aria-label="Исход основного времени: хозяева ${pct(reg.home)}, ничья ${pct(reg.draw)}, гости ${pct(reg.away)}">${[['h', reg.home, g.home.abbr], ['d', reg.draw, 'X'], ['a', reg.away, g.away.abbr]].map(([c, p, t]) => `<div class="${c}" style="width:${(p * 100).toFixed(1)}%">${p > 0.14 ? esc(t) + ' ' + pct(p, 0) : ''}</div>`).join('')}</div>
@@ -694,7 +724,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
       <button class="back" type="button" data-close="1">← Ставки</button>
       <section class="hero">
         <div class="vs"><div>${Logo(h)}<div class="nm">${esc(tname(h))}</div><small>хозяева</small></div>
-          <div class="mid">${res ? `<b>${res.fin_home}:${res.fin_away}</b>${res.end !== 'REG' ? res.end + ' · 60 мин ' + res.reg_home + ':' + res.reg_away : 'финал'}` : `<b>${g ? esc(localTime(g.start_utc)) : '—'}</b>`}</div>
+          <div class="mid">${res ? `<b>${res.fin_home}:${res.fin_away}</b>${esc(finLine(res))}` : `<b>${g ? esc(localTime(g.start_utc)) : '—'}</b>`}</div>
           <div>${Logo(a)}<div class="nm">${esc(tname(a))}</div><small>гости</small></div></div>
         <dl class="kv">
           <dt>Начало</dt><dd>${g ? esc(localDateTime(g.start_utc)) : esc(b.date)}</dd>
