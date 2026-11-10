@@ -1,1 +1,1 @@
-{"date":"2026-11-09","status":"ok","step":"","reason":"","attempt_utc":"2026-11-09T21:05:56Z","finished_utc":"2026-11-09T21:11:28Z","last_success_utc":"2026-11-09T21:11:28Z"}
+{"date":"2026-11-10","status":"fail","step":"build_tables","reason":"Cannot index into a null array","attempt_utc":"2026-11-10T19:59:54Z","finished_utc":"2026-11-10T20:02:45Z","last_success_utc":"2026-11-09T21:11:28Z"}
