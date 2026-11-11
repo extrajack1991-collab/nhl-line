@@ -452,7 +452,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     const chips = (q.us || []).map(u => `<span class="qt${old(u.updated_utc) ? ' old' : ''}${u.in_market ? '' : ' po'}" title="${u.in_market ? 'входит в рыночную вероятность' : 'только цена — в рыночную вероятность не входит'}">${esc(u.book)} <b>${esc(hm(u.updated_utc))}</b></span>`);
     if (q.marathon_utc) chips.push(`<span class="qt po" title="только цена">Марафон <b>${esc(hm(q.marathon_utc))}</b></span>`);
     if (q.fonbet_utc) chips.push(`<span class="qt po" title="только цена">Fonbet <b>${esc(hm(q.fonbet_utc))}</b></span>`);
-    return chips.length ? `<div class="qtimes" aria-label="Время котировок">${chips.join('')}</div><div class="foot">Время последней котировки до расчёта. Сплошная рамка — книга входит в рыночную вероятность, пунктир — только цена; жёлтая — котировка не менялась больше 24 ч до начала.</div>` : '';
+    return chips.length ? `<div class="qtimes" aria-label="Время котировок">${chips.join('')}</div><div class="foot">Время последней котировки до расчёта; у книг США с 12.11 — время загрузки ленты Action Network (в новой ленте нет времени самой котировки). Сплошная рамка — книга входит в рыночную вероятность, пунктир — только цена; жёлтая — котировка не менялась больше 24 ч до начала.</div>` : '';
   }
   function TrustBlock(g) {
     const p = g.probs; if (!p) return '';
