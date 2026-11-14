@@ -385,7 +385,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
         <div class="gtop"><span class="when">${esc(localTime(start))}</span><span class="tags">${state}${bet}${fav}</span></div>
         <div class="teams">${TeamRow(g.home.abbr, 'home', g, res)}${TeamRow(g.away.abbr, 'away', g, res)}</div>
         ${o ? o.html : `<div class="odds">${['П1', 'X', 'П2'].map(k => `<div class="odd fair"><small>${k}</small><b>—</b></div>`).join('')}</div>`}
-        <div class="gfoot"><span>${o ? `Осн. время · ${esc(o.src)}${(() => { const t = /Марафон/.test(o.src) ? g.quotes?.marathon_utc : /Fonbet/.test(o.src) ? g.quotes?.fonbet_utc : null; return t ? ' · ' + esc(hm(t)) : ''; })()}` : 'Линия ещё не рассчитана'}</span>${res ? `<span>итог: ${res.end === 'REG' ? 'основное время' : `${res.end === 'OT' ? 'овертайм' : 'буллиты'} · 60 мин ${res.reg_home}:${res.reg_away}`}</span>` : ''}</div>
+        <div class="gfoot"><span>${o ? `Осн. время · ${esc(o.src)}${(() => { const t = /Марафон/.test(o.src) ? g.quotes?.marathon_utc : /Fonbet/.test(o.src) ? g.quotes?.fonbet_utc : null; const old = !/Марафон/.test(o.src) && /Fonbet/.test(o.src) && S.inputs?.fonbet?.stale; return t ? ' · ' + esc(hm(t)) + (old ? ' · устарела' : '') : ''; })()}` : 'Линия ещё не рассчитана'}</span>${res ? `<span>итог: ${res.end === 'REG' ? 'основное время' : `${res.end === 'OT' ? 'овертайм' : 'буллиты'} · 60 мин ${res.reg_home}:${res.reg_away}`}</span>` : ''}</div>
       </button>
       <button class="more" type="button" data-more="${esc(g.key)}" aria-expanded="${open}"><span>Форма и статистика команд</span><span class="chev">▾</span></button>
       ${open ? `<div class="extra">${GameExtra(g, g.away.abbr, g.home.abbr)}</div>` : ''}
@@ -428,6 +428,16 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
   }
   const actionable = g => S.line?.kind === 'current' && nowMs() < new Date(g.start_utc).getTime();
   const decTxt = (d, act) => d === 'BET' && !act ? 'BET · не действует' : (d || '—');
+  function InputsNote(inp) {
+    if (!inp) return '';
+    const parts = [];
+    const t = inp.xg_teams, gk = inp.xg_goalies, fb = inp.fonbet;
+    if (t?.stale) parts.push(`xG команд — ${esc(t.source || 'MoneyPuck')}${t.fetched_utc ? ' от ' + esc(hm(t.fetched_utc)) : ''}${t.manual ? ' (файл загружен вручную)' : ''}: данные устарели`);
+    if (gk?.stale) parts.push(`xG вратарей (${esc(gk.source || 'собственный')}) устарел`);
+    if (fb?.stale) parts.push(`линия Fonbet ${fb.fetched_utc ? 'от ' + esc(hm(fb.fetched_utc)) + ' ' : ''}устарела — ставки по её ценам не рассматриваются (PASS)`);
+    const xgOld = t?.stale || gk?.stale;
+    return parts.length ? `<div class="note${xgOld ? ' stale' : ''}" data-inputs="stale"><b>Входные данные устарели.</b> ${parts.join('; ')}.${xgOld ? ' По правилу проверки качества решения дня — PASS.' : ''}</div>` : '';
+  }
   function LineBanner(st) {
     if (!st || st.kind === 'none') return '';
     const when = hm(new Date(st.gen).toISOString()), age = ageH(st.age);
@@ -451,7 +461,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     const st = new Date(g.start_utc).getTime(), old = iso => iso && (st - new Date(iso).getTime()) > 24 * 3600e3;
     const chips = (q.us || []).map(u => `<span class="qt${old(u.updated_utc) ? ' old' : ''}${u.in_market ? '' : ' po'}" title="${u.in_market ? 'входит в рыночную вероятность' : 'только цена — в рыночную вероятность не входит'}">${esc(u.book)} <b>${esc(hm(u.updated_utc))}</b></span>`);
     if (q.marathon_utc) chips.push(`<span class="qt po" title="только цена">Марафон <b>${esc(hm(q.marathon_utc))}</b></span>`);
-    if (q.fonbet_utc) chips.push(`<span class="qt po" title="только цена">Fonbet <b>${esc(hm(q.fonbet_utc))}</b></span>`);
+    if (q.fonbet_utc) chips.push(`<span class="qt po${S.inputs?.fonbet?.stale ? ' old' : ''}" title="только цена${S.inputs?.fonbet?.stale ? ' · линия Fonbet устарела, решения по ней — PASS' : ''}">Fonbet <b>${esc(hm(q.fonbet_utc))}</b>${S.inputs?.fonbet?.stale ? ' · устарела' : ''}</span>`);
     return chips.length ? `<div class="qtimes" aria-label="Время котировок">${chips.join('')}</div><div class="foot">Время последней котировки до расчёта; у книг США с 12.11 — время загрузки ленты Action Network (в новой ленте нет времени самой котировки). Сплошная рамка — книга входит в рыночную вероятность, пунктир — только цена; жёлтая — котировка не менялась больше 24 ч до начала.</div>` : '';
   }
   function TrustBlock(g) {
@@ -615,7 +625,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     catch (e) { view.innerHTML = EmptyState('Не удалось загрузить данные', esc(e.message), true); return; }
     if (S.section !== 'games' || S.open) return;
     const games = day ? day.games : schedGames(d);
-    S.line = lineState(day);
+    S.line = lineState(day); S.inputs = day?.inputs || null;
     gen.textContent = day ? 'расчёт ' + new Date(day.generated_utc).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + (S.line.kind === 'stale' ? ' · STALE' : S.line.kind === 'archive' ? ' · архив' : '') : '';
     if (!games.length) { view.innerHTML = EmptyState('В этот игровой день матчей нет', ''); return; }
     S.games = games;
@@ -623,6 +633,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     view.innerHTML = `
       <div class="sec-h"><h2>Игры · ${esc(dayParts(S.date).day)}</h2><span>время ${esc(tzName || 'местное')}</span></div>
       ${!day ? `<div class="note"><b>Линия на этот день ещё не рассчитана.</b> Показано расписание НХЛ; коэффициенты появятся после расчёта в день матчей.</div>` : LineBanner(S.line)}
+      ${InputsNote(day?.inputs)}
       ${(() => { const c = day?.completeness; if (!c) return ''; const parts = [];
         if (c.missing?.length) parts.push(`нет в линии: ${esc(c.missing.join(', '))}`);
         if (c.no_market?.length) parts.push(`без рыночной вероятности: ${esc(c.no_market.join(', '))}`);
@@ -787,7 +798,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
       <div class="foot">${v.n} матчей за ${v.days} игровых дней; прогноз — последний расчёт строго до начала матча. Меньше — лучше; разность ниже нуля — первый прогноз лучше второго. Интервал через ноль — разницы не доказано.</div></section>`;
     const paper = `<section class="panelbox"><h3><span>CLV «бумажных» ставок по модели</span></h3>
       <div class="ttab ci"><table><thead><tr><th>Правило</th><th>CLV-EV · 95% ДИ</th><th></th></tr></thead><tbody>${(A.paper_bets || []).map(p => `<tr><td>${esc(p.rule)}<small>${StatusPill(p.status, p.n_clv, p.required_n)}</small><small>${esc(p.verdict)} · итог ${money(p.profit)} на ${p.settled}</small></td><td>${p.clv_ev == null ? '—' : sPct(p.clv_ev)}${p.lo == null ? '' : `<small class="nw">[${sPct(p.lo)}; ${sPct(p.hi)}]</small>`}</td><td>${CIBar(p.lo, p.clv_ev, p.hi, 0.1, 1)}</td></tr>`).join('')}</tbody></table></div>
-      <div class="foot">CLV-EV = вероятность закрытия рынка без маржи × цена входа − 1: ожидаемая доходность, если закрытие — честная вероятность. Цена — лучшая из книг США на момент расчёта, закрытие — ESPN.</div></section>`;
+      <div class="foot">CLV-EV = вероятность закрытия без маржи × цена входа − 1: ожидаемая доходность, если закрытие — честная вероятность. Цена — лучшая из книг США на момент расчёта; закрытие — ${esc((A.paper_bets || [])[0]?.clv_basis || 'ESPN')}${(A.paper_bets || []).some(p => p.clv_ev_espn != null) ? ` (против закрытия ESPN, справочно: ${(A.paper_bets || []).map(p => `${esc(p.rule)} ${p.clv_ev_espn == null ? '—' : sPct(p.clv_ev_espn)}`).join('; ')}). Сравнение с закрытием другой книги завышает CLV за счёт выбора лучшей цены` : ''}.</div></section>`;
     const r = A.real_bets || {};
     const real = `<section class="panelbox"><h3><span>Журнал реальных ставок</span>${StatusPill(r.status, r.settled, r.required_n)}</h3>
       <div class="kpis">${StatsCard('Ставок', r.settled)}${StatsCard('Итог', money(r.profit), r.profit > 0 ? 'pos' : r.profit < 0 ? 'neg' : '')}${StatsCard('ROI', sPct(r.roi), r.roi > 0 ? 'pos' : r.roi < 0 ? 'neg' : '')}${StatsCard('Без 2 лучших', money(r.profit_without_top2), r.profit_without_top2 > 0 ? 'pos' : 'neg')}${StatsCard('CLV известен', `${r.clv_known} из ${r.n}`)}${StatsCard('Полных записей', `${r.complete_records ?? 0} из ${r.n}`)}</div>
