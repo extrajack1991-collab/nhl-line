@@ -242,6 +242,10 @@ main .wrap { padding-block: 14px calc(var(--nav-h) + env(safe-area-inset-bottom,
 .ana-grid { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr) }
 @media (min-width: 900px) { .ana-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) } }
 main .wrap > * { min-width: 0 }
+.ttab.rev table { min-width: 0; table-layout: fixed } .ttab.rev th:first-child, .ttab.rev td:first-child { width: 34% }
+.ttab.rev td b { font-weight: 600 } .ttab.rev td small.pos { color: var(--pos); font-weight: 600 }
+@media (max-width: 520px) { .ttab.rev .c-blend { display: none } .ttab.rev th:first-child, .ttab.rev td:first-child { width: 38% } .ttab.rev th, .ttab.rev td { padding: 7px 5px } }
+#dayrev { margin-bottom: 10px } #dayrev:empty { display: none }
 .ttab.ci table { min-width: 0; table-layout: fixed } .ttab.ci th:first-child, .ttab.ci td:first-child { width: 44% }
 .ttab.ci td small.nw { white-space: nowrap; font-family: var(--f-num); overflow-wrap: normal } .ttab.ci th:last-child { width: 26% }
 .cibar { display: block; width: 100%; height: 18px }
@@ -432,7 +436,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     if (!inp) return '';
     const parts = [];
     const t = inp.xg_teams, gk = inp.xg_goalies, fb = inp.fonbet;
-    if (t?.stale) parts.push(`xG команд — ${esc(t.source || 'MoneyPuck')}${t.fetched_utc ? ' от ' + esc(hm(t.fetched_utc)) : ''}${t.manual ? ' (файл загружен вручную)' : ''}: данные устарели`);
+    if (t?.stale) parts.push(`xG команд — ${esc(t.source || 'MoneyPuck')}${t.fetched_utc ? ' от ' + esc(hm(t.fetched_utc)) : ''}${t.manual ? ' (файл загружен вручную)' : ''}`);
     if (gk?.stale) parts.push(`xG вратарей (${esc(gk.source || 'собственный')}) устарел`);
     if (fb?.stale) parts.push(`линия Fonbet ${fb.fetched_utc ? 'от ' + esc(hm(fb.fetched_utc)) + ' ' : ''}устарела — ставки по её ценам не рассматриваются (PASS)`);
     const xgOld = t?.stale || gk?.stale;
@@ -764,7 +768,8 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     }
     if (S.section !== 'analytics') return;
     const strict = AnalyticsStrict();
-    if (!rows.length) { view.innerHTML = `<div class="sec-h"><h2>Аналитика</h2></div>` + strict + EmptyState('Недостаточно данных', 'Нужны дни с рассчитанной линией и известными результатами.'); return; }
+    const review = `<div id="dayrev">${DayReview()}</div>`;
+    if (!rows.length) { view.innerHTML = `<div class="sec-h"><h2>Аналитика</h2></div>` + review + strict + EmptyState('Недостаточно данных', 'Нужны дни с рассчитанной линией и известными результатами.'); bindDayReview(); return; }
     const hits = rows.filter(r => r.fav === r.y).length, brier = rows.reduce((s, r) => s + (r.ph - r.y) ** 2, 0) / rows.length;
     const ll = rows.reduce((s, r) => s - Math.log(Math.min(Math.max(r.y ? r.ph : 1 - r.ph, 1e-9), 1)), 0) / rows.length;
     const draws = rows.filter(r => r.rh === r.ra).length, pd = rows.reduce((s, r) => s + (r.reg?.draw || 0), 0) / rows.length;
@@ -775,6 +780,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     const cal = [[.5, .55], [.55, .6], [.6, .65], [.65, 1]].map(([lo, hi]) => { const g = fav.filter(r => r.p >= lo && r.p < hi); return g.length ? { x: `${Math.round(lo * 100)}–${Math.round(Math.min(hi, .99) * 100)}%`, y: 100 * g.filter(r => r.w).length / g.length, n: g.length, p: 100 * g.reduce((s, r) => s + r.p, 0) / g.length } : null; }).filter(Boolean);
     view.innerHTML = `
       <div class="sec-h"><h2>Аналитика</h2><span>${S.ana ? 'расчёт ' + esc(hm(S.ana.generated_utc)) : ''}</span></div>
+      ${review}
       ${strict}
       <div class="sec-h"><h2>Прогнозы против результатов · описательно</h2>${StatusPill(rows.length < 300 ? 'insufficient' : 'ok', rows.length, 300)}</div>
       <div class="kpis">${StatsCard('Матчей с итогом', rows.length)}${StatsCard('Угадан победитель', pct(hits / rows.length, 0))}${StatsCard('Brier', brier.toFixed(3).replace('.', ','))}${StatsCard('Log loss', ll.toFixed(3).replace('.', ','))}${StatsCard('Ничьих 60 мин', `${draws} из ${rows.length}`)}${StatsCard('Ничья по модели', pct(pd, 0))}</div>
@@ -783,7 +789,34 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
         ${StatsChart('ch-cal', 'Калибровка: фаворит выигрывал', '', cal.map(c => ({ x: c.x, y: c.y, tip: `прогноз ${c.p.toFixed(0)}% → факт ${c.y.toFixed(0)}% · матчей ${c.n}` })), { fmt: v => v.toFixed(0) + '%', zero: false, yMin: 0, yMax: 100 })}
       </div>
       <div class="foot">Этот блок — по последнему расчёту каждого дня из приложения, включая расчёты, сделанные близко к началу. Строгая проверка (только прогнозы до начала, один набор матчей) — выше. Brier 0,25 и log loss 0,693 — уровень монетки; рынок НХЛ обычно даёт около 0,24 и 0,67.</div>`;
-    bindTips();
+    bindTips(); bindDayReview();
+  }
+
+  // Разбор игрового дня по матчам (analytics.json → day_reviews, 15.11.2026): последний расчёт строго до начала против итога.
+  // Описательно: один день — не вывод о качестве модели.
+  function DayReview() {
+    const R = S.ana?.day_reviews || [];
+    if (!R.length) return '';
+    const d = R.find(x => x.date === S.revDay) || R[0];
+    const ll = x => x == null ? '—' : Number(x).toFixed(3).replace('.', ',');
+    const endTxt = e => e === 'OT' ? ' ОТ' : e === 'SO' ? ' Б' : '';
+    const seg = `<div class="seg" role="group" aria-label="Игровой день разбора">${R.map(x => `<button type="button" data-rday="${esc(x.date)}" aria-pressed="${x.date === d.date}">${esc(dayParts(x.date).day)}</button>`).join('')}</div>`;
+    const row = g => { const [aw, hm] = g.game.split('@');
+      const cell = (p, who) => `${pct(p, 0)}${g.closer === who ? '<small class="pos">ближе</small>' : ''}`;
+      return `<tr><td>${esc(aw)} — ${esc(hm)}<small>${esc(localTime(g.start_utc))}${g.minutes_before != null ? ` · прогноз за ${g.minutes_before >= 120 ? Math.round(g.minutes_before / 60) + ' ч' : g.minutes_before + ' мин'}` : ''}${g.decision ? ' · ' + esc(g.decision) : ''}</small></td>
+        <td><b>${esc(g.score || '—')}${endTxt(g.end)}</b><small>победа ${esc(g.winner)}</small></td>
+        <td>${cell(g.win_model, 'модель')}<small>${g.fav_model_hit ? 'угадан' : 'мимо'}</small></td>
+        <td class="c-blend">${pct(g.win_blend, 0)}</td>
+        <td>${cell(g.win_market, 'рынок')}<small>${g.fav_market_hit ? 'угадан' : 'мимо'}</small></td></tr>`; };
+    const better = d.ll_model < d.ll_market ? 'pos' : d.ll_model > d.ll_market ? 'neg' : '';
+    return `<section class="panelbox"><h3><span>Разбор игрового дня · ${esc(dayParts(d.date).day)}</span><span class="pill na">описательно</span></h3>
+      ${seg}
+      <div class="kpis">${StatsCard('Матчей', d.n)}${StatsCard('Фаворит модели', `${d.fav_model_hits} из ${d.n}`)}${StatsCard('Фаворит рынка', `${d.fav_market_hits} из ${d.n}`)}${StatsCard('Log loss модели', ll(d.ll_model), better)}${StatsCard('Log loss рынка', ll(d.ll_market))}${StatsCard('Модель ближе к итогу', `${d.model_closer} из ${d.n}`)}</div>
+      <div class="ttab rev"><table><thead><tr><th>Матч</th><th>Счёт</th><th>Модель</th><th class="c-blend">90/10</th><th>Рынок</th></tr></thead><tbody>${d.games.map(row).join('')}</tbody></table></div>
+      <div class="foot">Проценты — вероятность, которую прогноз дал команде, выигравшей матч (с ОТ и буллитами); выше — лучше. «Модель» — чистая модель, «90/10» — прогноз приложения (на узком экране скрыт), «Рынок» — книги США без маржи в момент расчёта. «Угадан» — фаворит этого прогноза выиграл; «ближе» — у кого меньше log loss по матчу. Прогноз — последний расчёт строго до начала матча. Один день — не вывод: качество модели оценивается на 300 матчах в блоке «Модель против рынка».</div></section>`;
+  }
+  function bindDayReview() {
+    view.querySelectorAll('[data-rday]').forEach(b => b.addEventListener('click', () => { S.revDay = b.dataset.rday; const box = $('dayrev'); if (box) { box.innerHTML = DayReview(); bindDayReview(); } }));
   }
 
   // Строгая аналитика из data/analytics.json (export_analytics.ps1): у каждого показателя — n и статус выборки
@@ -798,7 +831,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
       <div class="foot">${v.n} матчей за ${v.days} игровых дней; прогноз — последний расчёт строго до начала матча. Меньше — лучше; разность ниже нуля — первый прогноз лучше второго. Интервал через ноль — разницы не доказано.</div></section>`;
     const paper = `<section class="panelbox"><h3><span>CLV «бумажных» ставок по модели</span></h3>
       <div class="ttab ci"><table><thead><tr><th>Правило</th><th>CLV-EV · 95% ДИ</th><th></th></tr></thead><tbody>${(A.paper_bets || []).map(p => `<tr><td>${esc(p.rule)}<small>${StatusPill(p.status, p.n_clv, p.required_n)}</small><small>${esc(p.verdict)} · итог ${money(p.profit)} на ${p.settled}</small></td><td>${p.clv_ev == null ? '—' : sPct(p.clv_ev)}${p.lo == null ? '' : `<small class="nw">[${sPct(p.lo)}; ${sPct(p.hi)}]</small>`}</td><td>${CIBar(p.lo, p.clv_ev, p.hi, 0.1, 1)}</td></tr>`).join('')}</tbody></table></div>
-      <div class="foot">CLV-EV = вероятность закрытия без маржи × цена входа − 1: ожидаемая доходность, если закрытие — честная вероятность. Цена — лучшая из книг США на момент расчёта; закрытие — ${esc((A.paper_bets || [])[0]?.clv_basis || 'ESPN')}${(A.paper_bets || []).some(p => p.clv_ev_espn != null) ? ` (против закрытия ESPN, справочно: ${(A.paper_bets || []).map(p => `${esc(p.rule)} ${p.clv_ev_espn == null ? '—' : sPct(p.clv_ev_espn)}`).join('; ')}). Сравнение с закрытием другой книги завышает CLV за счёт выбора лучшей цены` : ''}.</div></section>`;
+      <div class="foot">CLV-EV = вероятность закрытия без маржи × цена входа − 1: ожидаемая доходность, если закрытие — честная вероятность. Цена — лучшая из книг США на момент расчёта; база сравнения — ${esc((A.paper_bets || [])[0]?.clv_basis || 'закрытие ESPN')}${(A.paper_bets || []).some(p => p.clv_ev_espn != null) ? ` (против закрытия ESPN, справочно: ${(A.paper_bets || []).map(p => `${esc(p.rule)} ${p.clv_ev_espn == null ? '—' : sPct(p.clv_ev_espn)}`).join('; ')}). Сравнение с закрытием другой книги завышает CLV за счёт выбора лучшей цены` : ''}.</div></section>`;
     const r = A.real_bets || {};
     const real = `<section class="panelbox"><h3><span>Журнал реальных ставок</span>${StatusPill(r.status, r.settled, r.required_n)}</h3>
       <div class="kpis">${StatsCard('Ставок', r.settled)}${StatsCard('Итог', money(r.profit), r.profit > 0 ? 'pos' : r.profit < 0 ? 'neg' : '')}${StatsCard('ROI', sPct(r.roi), r.roi > 0 ? 'pos' : r.roi < 0 ? 'neg' : '')}${StatsCard('Без 2 лучших', money(r.profit_without_top2), r.profit_without_top2 > 0 ? 'pos' : 'neg')}${StatsCard('CLV известен', `${r.clv_known} из ${r.n}`)}${StatsCard('Полных записей', `${r.complete_records ?? 0} из ${r.n}`)}</div>
