@@ -290,11 +290,10 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
   const S = { index: [], meta: null, betsDoc: null, days: [], dayCache: {}, date: null, section: 'games', open: null, tab: store.get('nhl-tab') || 'winner', totals: 'весь матч', period: store.get('nhl-period') || 'season', expanded: new Set() };
   async function getJson(path) { const r = await fetch(path, { cache: 'no-store' }); if (!r.ok) throw new Error(`${path}: ${r.status}`); return r.json(); }
 
-  // Игровой день — по восточному времени США (так ведёт расписание НХЛ); время матча — в часовом поясе пользователя
-  const etDate = d => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
-  const localTime = iso => new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-  const localDateTime = iso => new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  const tzName = (() => { try { return new Intl.DateTimeFormat('ru-RU', { timeZoneName: 'short' }).formatToParts(new Date()).find(p => p.type === 'timeZoneName')?.value || '' } catch { return '' } })();
+  // Дата и время начала матча — по Москве
+  const moscowDate = d => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Moscow', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  const localTime = iso => new Date(iso).toLocaleTimeString('ru-RU', { timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit' });
+  const localDateTime = iso => new Date(iso).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   const dayParts = d => { const [y, m, dd] = d.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1, dd));
     return { day: t.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'UTC' }).replace('.', ''), wd: t.toLocaleDateString('ru-RU', { weekday: 'short', timeZone: 'UTC' }) }; };
   const team = abbr => S.meta?.teams?.[abbr] || null;
@@ -303,14 +302,10 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
 
   // Все игровые дни — только даты, где есть матчи: дни с рассчитанной линией + дни из расписания НХЛ
   function buildDays() {
-    const m = new Map();
-    for (const d of S.index) m.set(d.date, { date: d.date, games: d.games, line: true });
-    for (const d of (S.meta?.schedule || [])) if (!m.has(d.date)) m.set(d.date, { date: d.date, games: d.games.length, line: false, sched: d.games });
-    for (const d of (S.meta?.schedule || [])) if (m.get(d.date)) m.get(d.date).sched = d.games;
-    S.days = [...m.values()].filter(d => d.games > 0).sort((a, b) => a.date.localeCompare(b.date));
+    S.days = S.index;
   }
   function currentGameDay() {
-    const today = etDate(new Date());
+    const today = moscowDate(new Date());
     if (S.days.some(d => d.date === today)) return today;
     return (S.days.find(d => d.date > today) || S.days[S.days.length - 1] || {}).date || null;
   }
@@ -397,7 +392,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
   }
   // ---------- достоверность (этап 9 аудита) ----------
   const ageTxt = iso => { if (!iso) return '—'; const m = (Date.now() - new Date(iso).getTime()) / 60000; return m < 60 ? `${Math.max(0, Math.round(m))} мин` : m < 2880 ? `${Math.round(m / 60)} ч` : `${Math.round(m / 1440)} дн`; };
-  const hm = iso => iso ? new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+  const hm = iso => iso ? new Date(iso).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
   // ---------- итог матча: результаты публикуются вечерним расчётом (data/meta.json, results.csv) ----------
   // end: REG — основное время, OT — овертайм, SO — буллиты. Счёт — хозяева:гости (как порядок команд на карточке).
   const END_TXT = { REG: 'в основное время', OT: 'в овертайме', SO: 'по буллитам' };
@@ -425,7 +420,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     const starts = (day.games || []).map(g => new Date(g.start_utc).getTime()).filter(x => !isNaN(x));
     const rs = S.runStatus;
     if (starts.length && nowMs() >= Math.max(...starts)) return { kind: 'archive', gen, age, reason: 'все матчи дня начались' };
-    if (rs && rs.date === day.date && rs.status === 'fail' && new Date(rs.attempt_utc).getTime() > gen)
+    if (rs && (rs.time_zone === 'Europe/Moscow' ? rs.date === day.date : day.source_dates?.includes(rs.date)) && rs.status === 'fail' && new Date(rs.attempt_utc).getTime() > gen)
       return { kind: 'stale', gen, age, reason: `расчёт ${hm(rs.attempt_utc)} не выполнен${rs.step ? ' (шаг ' + rs.step + ')' : ''}${rs.reason ? ': ' + rs.reason : ''}` };
     if (age > LINE_MAX_AGE_H) return { kind: 'stale', gen, age, reason: `нового расчёта нет дольше ${LINE_MAX_AGE_H} ч` };
     return { kind: 'current', gen, age };
@@ -614,7 +609,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
   async function loadDay(date) {
     const d = S.days.find(x => x.date === date);
     if (!d?.line) return null;
-    return S.dayCache[date] || (S.dayCache[date] = await getJson(`data/${date}.json`));
+    return S.dayCache[date] || (S.dayCache[date] = await getJson(`data/msk-${date}.json`));
   }
   function schedGames(d) {
     return (d.sched || []).map(s => ({ id: s.id, key: `${s.away}@${s.home}`, start_utc: s.start_utc, away: { abbr: s.away, name: tname(s.away) }, home: { abbr: s.home, name: tname(s.home) } }));
@@ -630,13 +625,13 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     if (S.section !== 'games' || S.open) return;
     const games = day ? day.games : schedGames(d);
     S.line = lineState(day); S.inputs = day?.inputs || null;
-    gen.textContent = day ? 'расчёт ' + new Date(day.generated_utc).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + (S.line.kind === 'stale' ? ' · STALE' : S.line.kind === 'archive' ? ' · архив' : '') : '';
+    gen.textContent = day ? 'расчёт ' + new Date(day.generated_utc).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + (S.line.kind === 'stale' ? ' · STALE' : S.line.kind === 'archive' ? ' · архив' : '') : '';
     if (!games.length) { view.innerHTML = EmptyState('В этот игровой день матчей нет', ''); return; }
     S.games = games;
     const bets = games.filter(g => g.best_bet && g.best_bet !== 'PASS').length;
     view.innerHTML = `
-      <div class="sec-h"><h2>Игры · ${esc(dayParts(S.date).day)}</h2><span>время ${esc(tzName || 'местное')}</span></div>
-      ${!day ? `<div class="note"><b>Линия на этот день ещё не рассчитана.</b> Показано расписание НХЛ; коэффициенты появятся после расчёта в день матчей.</div>` : LineBanner(S.line)}
+      <div class="sec-h"><h2>Игры · ${esc(dayParts(S.date).day)}</h2><span>время МСК</span></div>
+      ${!day ? `<div class="note"><b>Предматчевая линия отсутствует.</b> В карточках указаны время начала и известные результаты.</div>` : LineBanner(S.line)}
       ${InputsNote(day?.inputs)}
       ${(() => { const c = day?.completeness; if (!c) return ''; const parts = [];
         if (c.missing?.length) parts.push(`нет в линии: ${esc(c.missing.join(', '))}`);
@@ -686,7 +681,7 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
       <button class="back" type="button" data-close="1">← Игры ${esc(dayParts(S.date).day)}</button>
       ${S.line && S.line.kind !== 'current' ? LineBanner(S.line) : !S.actNow && S.line?.kind === 'current' ? `<div class="note stale" data-line="started"><b>Матч начался.</b> Решения BET по нему не действуют.</div>` : ''}
       <section class="hero">
-        <div class="vs">${side(g.home.abbr, g.home)}<div class="mid">${res ? `<b>${res.fin_home}:${res.fin_away}</b>${esc(finLine(res))}` : gameStatus(g, null).kind === 'wait' ? `<b>${esc(localTime(g.start_utc))}</b>завершён · счёт ожидается` : `<b>${esc(localTime(g.start_utc))}</b>${esc(new Date(g.start_utc).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }))}`}</div>${side(g.away.abbr, g.away)}</div>
+        <div class="vs">${side(g.home.abbr, g.home)}<div class="mid">${res ? `<b>${res.fin_home}:${res.fin_away}</b>${esc(finLine(res))}` : gameStatus(g, null).kind === 'wait' ? `<b>${esc(localTime(g.start_utc))}</b>завершён · счёт ожидается` : `<b>${esc(localTime(g.start_utc))}</b>${esc(new Date(g.start_utc).toLocaleDateString('ru-RU', { timeZone: 'Europe/Moscow', day: 'numeric', month: 'short' }))}`}</div>${side(g.away.abbr, g.away)}</div>
         ${o ? o.html + `<div class="legend"><span>П1 — ${esc(tname(g.home.abbr))}</span><span>${esc(o.src)}</span><span>П2 — ${esc(tname(g.away.abbr))}</span></div>` : ''}
         ${reg ? `<div class="facts"><div><b>${dec(g.home.xg)}</b><span>ожид. голов ${esc(g.home.abbr)}</span></div><div><b>${dec(g.exp_total)}</b><span>ожид. тотал</span></div><div><b>${dec(g.away.xg)}</b><span>ожид. голов ${esc(g.away.abbr)}</span></div></div>
         <div class="regbar" role="img" aria-label="Исход основного времени: хозяева ${pct(reg.home)}, ничья ${pct(reg.draw)}, гости ${pct(reg.away)}">${[['h', reg.home, g.home.abbr], ['d', reg.draw, 'X'], ['a', reg.away, g.away.abbr]].map(([c, p, t]) => `<div class="${c}" style="width:${(p * 100).toFixed(1)}%">${p > 0.14 ? esc(t) + ' ' + pct(p, 0) : ''}</div>`).join('')}</div>
@@ -911,15 +906,33 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
   async function init() {
     initTg();
     view.innerHTML = LoadingState(3);
-    try { S.index = (await getJson('data/index.json')).dates || []; }
+    try { S.index = (await getJson('data/moscow-index.json')).dates || []; }
     catch (e) { view.innerHTML = EmptyState('Не удалось загрузить данные', esc(e.message), true); BottomNavigation(); return; }
     const [meta, bets, ana, rs] = await Promise.allSettled([getJson('data/meta.json'), getJson('data/bets.json'), getJson('data/analytics.json'), getJson('data/run_status.json')]);
     S.meta = meta.status === 'fulfilled' ? meta.value : null; S.betsDoc = bets.status === 'fulfilled' ? bets.value : null; S.ana = ana.status === 'fulfilled' ? ana.value : null;
+    const gameDates = new Map(S.index.flatMap(d => d.sched.map(g => [String(g.id), d.date])));
+    for (const b of S.betsDoc?.bets || []) b.date = gameDates.get(String(b.game_id)) || b.date;
+    if (S.ana?.day_reviews) {
+      const reviews = new Map();
+      for (const review of S.ana.day_reviews) for (const g of review.games) {
+        const date = moscowDate(new Date(g.start_utc));
+        if (!reviews.has(date)) reviews.set(date, []);
+        reviews.get(date).push(g);
+      }
+      S.ana.day_reviews = [...reviews].sort(([a],[b]) => b.localeCompare(a)).map(([date,games]) => ({
+        date, games, n: games.length,
+        ll_model: games.reduce((sum,g) => sum + g.ll_model, 0) / games.length,
+        ll_market: games.reduce((sum,g) => sum + g.ll_market, 0) / games.length,
+        fav_model_hits: games.filter(g => g.fav_model_hit).length,
+        fav_market_hits: games.filter(g => g.fav_market_hit).length,
+        model_closer: games.filter(g => g.closer === 'модель').length
+      }));
+    }
     S.runStatus = rs.status === 'fulfilled' ? rs.value : null;
-    if (S.runStatus?.step === 'schedule' && ['no_games', 'fail'].includes(S.runStatus.status)) {
+    if (S.runStatus?.time_zone === 'Europe/Moscow' && ['no_games', 'fail'].includes(S.runStatus.status)) {
       const notice = document.createElement('div');
       notice.className = 'note';
-      notice.textContent = S.runStatus.date + ' ET · ' + (S.runStatus.status === 'no_games' ? 'Матчей регулярного сезона нет.' : 'Расписание НХЛ недоступно. Новая линия не рассчитана.');
+      notice.textContent = S.runStatus.date + ' МСК · ' + (S.runStatus.status === 'no_games' ? 'Матчей регулярного сезона нет.' : 'Новая линия не рассчитана.');
       document.getElementById('view').before(notice);
     }   // итог последней попытки расчёта (run_day.ps1); нет файла — статус по возрасту линии
     // проверка сценариев на локальном сервере: ?asof=<ISO> задаёт «сейчас»; на GitHub Pages и claude.ai не действует
