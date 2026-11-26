@@ -915,7 +915,13 @@ nav.bottom button[aria-current="page"] { color: var(--accent); font-weight: 600 
     catch (e) { view.innerHTML = EmptyState('Не удалось загрузить данные', esc(e.message), true); BottomNavigation(); return; }
     const [meta, bets, ana, rs] = await Promise.allSettled([getJson('data/meta.json'), getJson('data/bets.json'), getJson('data/analytics.json'), getJson('data/run_status.json')]);
     S.meta = meta.status === 'fulfilled' ? meta.value : null; S.betsDoc = bets.status === 'fulfilled' ? bets.value : null; S.ana = ana.status === 'fulfilled' ? ana.value : null;
-    S.runStatus = rs.status === 'fulfilled' ? rs.value : null;   // итог последней попытки расчёта (run_day.ps1); нет файла — статус по возрасту линии
+    S.runStatus = rs.status === 'fulfilled' ? rs.value : null;
+    if (S.runStatus?.step === 'schedule' && ['no_games', 'fail'].includes(S.runStatus.status)) {
+      const notice = document.createElement('div');
+      notice.className = 'note';
+      notice.textContent = S.runStatus.date + ' ET · ' + (S.runStatus.status === 'no_games' ? 'Матчей регулярного сезона нет.' : 'Расписание НХЛ недоступно. Новая линия не рассчитана.');
+      document.getElementById('view').before(notice);
+    }   // итог последней попытки расчёта (run_day.ps1); нет файла — статус по возрасту линии
     // проверка сценариев на локальном сервере: ?asof=<ISO> задаёт «сейчас»; на GitHub Pages и claude.ai не действует
     try { const qa = new URLSearchParams(location.search).get('asof'); if (qa && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) S.asOf = Date.parse(qa); } catch {}
     buildDays();
